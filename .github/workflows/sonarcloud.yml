@@ -63,7 +63,7 @@ jobs:
 
       - name: Configure
         run: |
-             cmake -B _build -S . -DCMAKE_BUILD_TYPE=Debug
+          cmake -B _build -S . -DCMAKE_BUILD_TYPE=Debug
 
       - name: Build
         run: |
