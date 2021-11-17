@@ -66,7 +66,7 @@ jobs:
              cmake -B _build -S . -DCMAKE_BUILD_TYPE=Debug
 
       - name: Build
-        run: 
+        run: |
 	  build-wrapper-linux-x86-64 --out-dir $GITHUB_WORKSPACE/_build/output cmake --build _build --config Debug -j2
 
       - name: Run sonar-scanner
