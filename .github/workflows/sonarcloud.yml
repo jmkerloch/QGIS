@@ -66,17 +66,16 @@ jobs:
              cmake -B _build -S . -DCMAKE_BUILD_TYPE=Debug
 
       - name: Build
-        run: build-wrapper-linux-x86-64 --out-dir $GITHUB_WORKSPACE/_build/output cmake --build _build --config Debug -j2
-
+        run: 
+	  build-wrapper-linux-x86-64 --out-dir $GITHUB_WORKSPACE/_build/output cmake --build _build --config Debug -j2
 
       - name: Run sonar-scanner
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          LOCAL_LANG: "en_US.UTF-8"
         run: |
-          apt-get update && apt-get install -y locales
-    	  locale-gen "en_US.UTF-8"
-	  update-locale LC_ALL="en_US.UTF-8"
-	  export LANG="en_US.UTF-8"
+	  locale-gen "${{env.LOCAL_LANG}}"
+	  update-locale LC_ALL="${{env.LOCAL_LANG}}"
+	  export LANG="${{env.LOCAL_LANG}}"
 	  sonar-scanner --define sonar.host.url="${{ env.SONAR_SERVER_URL }}"
-	  
