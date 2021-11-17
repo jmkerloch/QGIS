@@ -68,14 +68,15 @@ jobs:
 
       - name: Build
         run: |
-	  build-wrapper-linux-x86-64 --out-dir $GITHUB_WORKSPACE/_build/output cmake --build _build --config Debug -j2
+          build-wrapper-linux-x86-64 --out-dir $GITHUB_WORKSPACE/_build/output cmake --build _build --config Debug -j2
 
       - name: Run sonar-scanner
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-	  locale-gen "${{env.LANG}}"
-	  update-locale LC_ALL="${{env.LANG}}"
-	  export LANG="${{env.LANG}}"
-	  sonar-scanner --define sonar.host.url="${{ env.SONAR_SERVER_URL }}"
+          locale-gen "${{env.LANG}}"
+          update-locale LC_ALL="${{env.LANG}}"
+          export LANG="${{env.LANG}}"
+          sonar-scanner --define sonar.host.url="${{ env.SONAR_SERVER_URL }}"
+
