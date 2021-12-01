@@ -64,11 +64,11 @@ jobs:
 
       - name: Configure
         run: |
-          cmake -B _build -S . -DCMAKE_BUILD_TYPE=Debug
+          cmake -B _build -S . -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=False
 
       - name: Build
         run: |
-          build-wrapper-linux-x86-64 --out-dir $GITHUB_WORKSPACE/_build/output cmake --build _build --config Debug -j2
+          build-wrapper-linux-x86-64 --out-dir $GITHUB_WORKSPACE/_build/output cmake --build _build --config Debug -j4
 
       - name: Run sonar-scanner
         env:
