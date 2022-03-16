@@ -73,6 +73,7 @@
 #include "qgsalgorithmextractbyexpression.h"
 #include "qgsalgorithmextractbyextent.h"
 #include "qgsalgorithmextractbylocation.h"
+#include "qgsalgorithmextractlabels.h"
 #include "qgsalgorithmextractlayoutmapextent.h"
 #include "qgsalgorithmextractvertices.h"
 #include "qgsalgorithmextractspecificvertices.h"
@@ -321,6 +322,7 @@ void QgsNativeAlgorithms::loadAlgorithms()
   addAlgorithm( new QgsExtractByExpressionAlgorithm() );
   addAlgorithm( new QgsExtractByExtentAlgorithm() );
   addAlgorithm( new QgsExtractByLocationAlgorithm() );
+  addAlgorithm( new QgsExtractLabelsAlgorithm() );
   addAlgorithm( new QgsExtractMValuesAlgorithm() );
   addAlgorithm( new QgsExtractVerticesAlgorithm() );
   addAlgorithm( new QgsExtractSpecificVerticesAlgorithm() );
@@ -365,6 +367,7 @@ void QgsNativeAlgorithms::loadAlgorithms()
 #ifndef QT_NO_PRINTER
   addAlgorithm( new QgsLayoutAtlasToImageAlgorithm() );
   addAlgorithm( new QgsLayoutAtlasToPdfAlgorithm() );
+  addAlgorithm( new QgsLayoutAtlasToMultiplePdfAlgorithm() );
   addAlgorithm( new QgsLayoutToImageAlgorithm() );
   addAlgorithm( new QgsLayoutToPdfAlgorithm() );
 #endif

@@ -209,13 +209,23 @@ void QgsPythonUtilsImpl::doCustomImports()
   }
 }
 
-void QgsPythonUtilsImpl::initPython( QgisInterface *interface, const bool installErrorHook )
+void QgsPythonUtilsImpl::initPython( QgisInterface *interface, const bool installErrorHook, const QString &faultHandlerLogPath )
 {
   init();
   if ( !checkSystemImports() )
   {
     exitPython();
     return;
+  }
+
+  if ( !faultHandlerLogPath.isEmpty() )
+  {
+    runString( QStringLiteral( "import faulthandler" ) );
+    QString escapedPath = faultHandlerLogPath;
+    escapedPath.replace( '\\', QLatin1String( "\\\\" ) );
+    escapedPath.replace( '\'', QLatin1String( "\\'" ) );
+    runString( QStringLiteral( "fault_handler_file=open('%1', 'wt')" ).arg( escapedPath ) );
+    runString( QStringLiteral( "faulthandler.enable(file=fault_handler_file)" ) );
   }
 
   if ( interface )
@@ -627,7 +637,7 @@ QString QgsPythonUtilsImpl::getPluginMetadata( const QString &pluginName, const 
 
 bool QgsPythonUtilsImpl::pluginHasProcessingProvider( const QString &pluginName )
 {
-  return getPluginMetadata( pluginName, QStringLiteral( "hasProcessingProvider" ) ).compare( QLatin1String( "yes" ), Qt::CaseInsensitive ) == 0;
+  return getPluginMetadata( pluginName, QStringLiteral( "hasProcessingProvider" ) ).compare( QLatin1String( "yes" ), Qt::CaseInsensitive ) == 0 || getPluginMetadata( pluginName, QStringLiteral( "hasProcessingProvider" ) ).compare( QLatin1String( "true" ), Qt::CaseInsensitive ) == 0;
 }
 
 bool QgsPythonUtilsImpl::loadPlugin( const QString &packageName )

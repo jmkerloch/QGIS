@@ -49,6 +49,7 @@ class QgsMessageBar;
 class QgsVectorTileBasicRendererWidget;
 class QgsVectorTileBasicLabelingWidget;
 class QgsAnnotationLayer;
+class QgsLayerTreeGroup;
 
 class APP_EXPORT QgsLayerStyleManagerWidgetFactory : public QgsMapLayerConfigWidgetFactory
 {
@@ -115,6 +116,7 @@ class APP_EXPORT QgsLayerStylingWidget : public QWidget, private Ui::QgsLayerSty
 
   signals:
     void styleChanged( QgsMapLayer *layer );
+    void layerStyleChanged( const QString &currentStyleName );
 
   public slots:
     void setLayer( QgsMapLayer *layer );
@@ -136,6 +138,11 @@ class APP_EXPORT QgsLayerStylingWidget : public QWidget, private Ui::QgsLayerSty
     void setAnnotationItem( QgsAnnotationLayer *layer, const QString &itemId );
 
     /**
+     * Sets a layer tree group to show in the widget.
+     */
+    void setLayerTreeGroup( QgsLayerTreeGroup *group );
+
+    /**
      * Focuses the default widget for the current page.
      */
     void focusDefaultWidget();
@@ -147,6 +154,8 @@ class APP_EXPORT QgsLayerStylingWidget : public QWidget, private Ui::QgsLayerSty
 
   private:
     void pushUndoItem( const QString &name, bool triggerRepaint = true );
+    void emitLayerStyleChanged( const QString &currentStyleName ) {emit layerStyleChanged( currentStyleName );};
+    void emitLayerStyleRenamed();
     int mNotSupportedPage;
     int mLayerPage;
     QTimer *mAutoApplyTimer = nullptr;

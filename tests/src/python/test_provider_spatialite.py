@@ -10,17 +10,18 @@ __author__ = 'Vincent Mora'
 __date__ = '09/07/2013'
 __copyright__ = 'Copyright 2013, The QGIS Project'
 
-import qgis  # NOQA
-
 import os
 import re
-import sys
 import shutil
+import sys
 import tempfile
-from osgeo import ogr
 from datetime import datetime
 
-from qgis.core import (QgsProviderRegistry,
+import qgis  # NOQA
+from osgeo import ogr
+from qgis.PyQt.QtCore import QVariant, QByteArray
+from qgis.core import (Qgis,
+                       QgsProviderRegistry,
                        QgsDataSourceUri,
                        QgsVectorLayer,
                        QgsVectorDataProvider,
@@ -36,13 +37,11 @@ from qgis.core import (QgsProviderRegistry,
                        QgsRectangle,
                        QgsVectorLayerExporter,
                        QgsWkbTypes)
-
 from qgis.testing import start_app, unittest
-from utilities import unitTestDataPath
-from providertestbase import ProviderTestCase
-from qgis.PyQt.QtCore import QObject, QVariant, QByteArray
-
 from qgis.utils import spatialite_connect
+
+from providertestbase import ProviderTestCase
+from utilities import unitTestDataPath
 
 # Pass no_exit=True: for some reason this crashes sometimes on exit on Travis
 start_app(True)
@@ -452,6 +451,14 @@ class TestQgsSpatialiteProvider(unittest.TestCase, ProviderTestCase):
         self.assertEqual(layer.splitFeatures(
             [QgsPointXY(-0.5, 0.5), QgsPointXY(1.5, 0.5)], 0), 0)
         self.assertTrue(layer.commitChanges())
+
+    def test_crash_on_constraint_detection(self):
+        """
+        Test that constraint detection does not crash
+        """
+        # should be no crash!
+        QgsVectorLayer("dbname={} table=KNN".format(TEST_DATA_DIR + '/views_test.sqlite'), "KNN",
+                       "spatialite")
 
     def test_queries(self):
         """Test loading of query-based layers"""
@@ -1076,6 +1083,166 @@ class TestQgsSpatialiteProvider(unittest.TestCase, ProviderTestCase):
         err, ok = vl.loadDefaultStyle()
         self.assertTrue(ok)
 
+    def testStyleStorage(self):
+
+        # First test with invalid URI
+        vl = QgsVectorLayer('/idont/exist.sqlite', 'test', 'spatialite')
+
+        self.assertFalse(vl.dataProvider().isSaveAndLoadStyleToDatabaseSupported())
+
+        res, err = QgsProviderRegistry.instance().styleExists('spatialite', '/idont/exist.sqlite', '')
+        self.assertFalse(res)
+        self.assertTrue(err)
+        res, err = QgsProviderRegistry.instance().styleExists('spatialite', '/idont/exist.sqlite', 'a style')
+        self.assertFalse(res)
+        self.assertTrue(err)
+
+        related_count, idlist, namelist, desclist, errmsg = vl.listStylesInDatabase()
+        self.assertEqual(related_count, -1)
+        self.assertEqual(idlist, [])
+        self.assertEqual(namelist, [])
+        self.assertEqual(desclist, [])
+        self.assertTrue(errmsg)
+
+        qml, errmsg = vl.getStyleFromDatabase("1")
+        self.assertFalse(qml)
+        self.assertTrue(errmsg)
+
+        qml, success = vl.loadNamedStyle('/idont/exist.sqlite')
+        self.assertFalse(success)
+
+        errorMsg = vl.saveStyleToDatabase("name", "description", False, "")
+        self.assertTrue(errorMsg)
+
+        # create test db
+        dbname = os.path.join(tempfile.gettempdir(), "test_stylehandling.sqlite")
+        if os.path.exists(dbname):
+            os.remove(dbname)
+        con = spatialite_connect(dbname, isolation_level=None)
+        cur = con.cursor()
+        cur.execute("BEGIN")
+        sql = "SELECT InitSpatialMetadata()"
+        cur.execute(sql)
+
+        # simple table with primary key
+        sql = "CREATE TABLE test_pg (id INTEGER NOT NULL PRIMARY KEY, name TEXT NOT NULL)"
+        cur.execute(sql)
+
+        sql = "SELECT AddGeometryColumn('test_pg', 'geometry', 4326, 'POLYGON', 'XY')"
+        cur.execute(sql)
+
+        sql = "INSERT INTO test_pg (id, name, geometry) "
+        sql += "VALUES (1, 'toto', GeomFromText('POLYGON((0 0,1 0,1 1,0 1,0 0))', 4326))"
+        cur.execute(sql)
+
+        cur.execute("COMMIT")
+        con.close()
+
+        testPath = "dbname=%s table='test_pg' (geometry) key='id'" % dbname
+        vl = QgsVectorLayer(testPath, 'test', 'spatialite')
+        self.assertTrue(vl.isValid())
+
+        self.assertTrue(vl.dataProvider().isSaveAndLoadStyleToDatabaseSupported())
+
+        # style tables don't exist yet
+        res, err = QgsProviderRegistry.instance().styleExists('spatialite', vl.source(), '')
+        self.assertFalse(res)
+        self.assertFalse(err)
+        res, err = QgsProviderRegistry.instance().styleExists('spatialite', vl.source(), 'a style')
+        self.assertFalse(res)
+        self.assertFalse(err)
+
+        related_count, idlist, namelist, desclist, errmsg = vl.listStylesInDatabase()
+        self.assertEqual(related_count, 0)
+        self.assertEqual(idlist, [])
+        self.assertEqual(namelist, [])
+        self.assertEqual(desclist, [])
+        self.assertTrue(errmsg)
+
+        qml, errmsg = vl.getStyleFromDatabase("not_existing")
+        self.assertFalse(qml)
+        self.assertTrue(errmsg)
+
+        qml, success = vl.loadNamedStyle('{}|layerid=0'.format(dbname))
+        self.assertFalse(success)
+
+        errorMsg = vl.saveStyleToDatabase("name", "description", False, "")
+        self.assertEqual(errorMsg, "")
+
+        res, err = QgsProviderRegistry.instance().styleExists('spatialite', vl.source(), '')
+        self.assertFalse(res)
+        self.assertFalse(err)
+        res, err = QgsProviderRegistry.instance().styleExists('spatialite', vl.source(), 'a style')
+        self.assertFalse(res)
+        self.assertFalse(err)
+        res, err = QgsProviderRegistry.instance().styleExists('spatialite', vl.source(), 'name')
+        self.assertTrue(res)
+        self.assertFalse(err)
+
+        qml, errmsg = vl.getStyleFromDatabase("not_existing")
+        self.assertFalse(qml)
+        self.assertTrue(errmsg)
+
+        related_count, idlist, namelist, desclist, errmsg = vl.listStylesInDatabase()
+        self.assertEqual(related_count, 1)
+        self.assertFalse(errmsg)
+        self.assertEqual(idlist, ['1'])
+        self.assertEqual(namelist, ['name'])
+        self.assertEqual(desclist, ['description'])
+
+        qml, errmsg = vl.getStyleFromDatabase("100")
+        self.assertEqual(qml, "")
+        self.assertNotEqual(errmsg, "")
+
+        qml, errmsg = vl.getStyleFromDatabase("1")
+        self.assertTrue(qml.startswith('<!DOCTYPE qgis'), qml)
+        self.assertFalse(errmsg)
+
+        # overwrite existing style
+        settings = QgsSettings()
+        settings.setValue("/qgis/overwriteStyle", True)
+        errorMsg = vl.saveStyleToDatabase("name", "description_bis", False, "")
+        self.assertFalse(errorMsg)
+
+        res, err = QgsProviderRegistry.instance().styleExists('spatialite', vl.source(), 'name')
+        self.assertTrue(res)
+        self.assertFalse(err)
+
+        related_count, idlist, namelist, desclist, errmsg = vl.listStylesInDatabase()
+        self.assertEqual(related_count, 1)
+        self.assertFalse(errmsg)
+        self.assertEqual(idlist, ['1'])
+        self.assertEqual(namelist, ['name'])
+        self.assertEqual(desclist, ['description_bis'])
+
+        errorMsg = vl.saveStyleToDatabase("name_test2", "description_test2", True, "")
+        self.assertFalse(errmsg)
+
+        res, err = QgsProviderRegistry.instance().styleExists('spatialite', vl.source(), 'name_test2')
+        self.assertTrue(res)
+        self.assertFalse(err)
+
+        errorMsg = vl.saveStyleToDatabase("name2", "description2", True, "")
+        self.assertFalse(errmsg)
+
+        res, err = QgsProviderRegistry.instance().styleExists('spatialite', vl.source(), 'name2')
+        self.assertTrue(res)
+        self.assertFalse(err)
+
+        errorMsg = vl.saveStyleToDatabase("name3", "description3", True, "")
+        self.assertFalse(errmsg)
+
+        res, err = QgsProviderRegistry.instance().styleExists('spatialite', vl.source(), 'name3')
+        self.assertTrue(res)
+        self.assertFalse(err)
+
+        related_count, idlist, namelist, desclist, errmsg = vl.listStylesInDatabase()
+        self.assertEqual(related_count, 4)
+        self.assertFalse(errmsg)
+        self.assertCountEqual(idlist, ['1', '3', '4', '2'])
+        self.assertCountEqual(namelist, ['name', 'name2', 'name3', 'name_test2'])
+        self.assertCountEqual(desclist, ['description_bis', 'description2', 'description3', 'description_test2'])
+
     def _aliased_sql_helper(self, dbname):
         queries = (
             '(SELECT * FROM (SELECT * from \\"some view\\"))',
@@ -1550,7 +1717,7 @@ class TestQgsSpatialiteProvider(unittest.TestCase, ProviderTestCase):
 
         # prepare a project with transactions enabled
         p = QgsProject()
-        p.setAutoTransaction(True)
+        p.setTransactionMode(Qgis.TransactionMode.AutomaticGroups)
         p.addMapLayers([vl1, vl2])
 
         self.assertTrue(vl1.startEditing())
@@ -1622,7 +1789,7 @@ class TestQgsSpatialiteProvider(unittest.TestCase, ProviderTestCase):
         self.assertEqual(vl2.featureCount(), 1)
 
         project = QgsProject()
-        project.setAutoTransaction(True)
+        project.setTransactionMode(Qgis.TransactionMode.AutomaticGroups)
         project.addMapLayers([vl, vl2])
         project.setEvaluateDefaultValues(True)
 

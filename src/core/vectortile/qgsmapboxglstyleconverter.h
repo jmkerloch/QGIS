@@ -403,6 +403,13 @@ class CORE_EXPORT QgsMapBoxGlStyleConverter
     static QString parsePointStops( double base, const QVariantList &stops, QgsMapBoxGlStyleConversionContext &context, double multiplier = 1 );
 
     /**
+     * Takes numerical arrays from stops.
+     *
+     * \warning This is private API only, and may change in future QGIS versions
+     */
+    static QString parseArrayStops( const QVariantList &stops, QgsMapBoxGlStyleConversionContext &context, double multiplier = 1 );
+
+    /**
      * Parses a list of interpolation stops
      *
      * \param base interpolation exponent base
@@ -537,13 +544,9 @@ class CORE_EXPORT QgsMapBoxGlStyleConverter
     QgsMapBoxGlStyleConverter( const QgsMapBoxGlStyleConverter &other );
 #endif
 
-    static QString parseValue( const QVariant &value, QgsMapBoxGlStyleConversionContext &context );
+    static QString parseValue( const QVariant &value, QgsMapBoxGlStyleConversionContext &context, bool colorExpected = false );
 
-    /**
-     * Checks if value is a color before calling parseValue
-     */
-    static QString parseValueCheckColor( const QVariant &value, QgsMapBoxGlStyleConversionContext &context );
-    static QString parseKey( const QVariant &value );
+    static QString parseKey( const QVariant &value, QgsMapBoxGlStyleConversionContext &context );
 
     /**
      * Checks if interpolation bottom/top values are numeric values

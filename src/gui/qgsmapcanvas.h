@@ -30,6 +30,7 @@
 #include "qgsmapcanvasinteractionblocker.h"
 #include "qgsproject.h"
 #include "qgsdistancearea.h"
+#include "qgsmaprendererjob.h"
 
 #include <QDomDocument>
 #include <QGraphicsView>
@@ -72,6 +73,7 @@ class QgsRubberBand;
 class QgsMapCanvasAnnotationItem;
 class QgsReferencedRectangle;
 class QgsRenderedItemResults;
+class QgsTemporaryCursorOverride;
 
 class QgsTemporalController;
 
@@ -471,14 +473,20 @@ class GUI_EXPORT QgsMapCanvas : public QGraphicsView, public QgsExpressionContex
      */
     QgsMapLayer *layer( const QString &id );
 
-    //! Returns number of layers on the map
+    /**
+     * Returns number of layers on the map.
+     */
     int layerCount() const;
 
     /**
      * Returns the list of layers shown within the map canvas.
+     *
+     * Since QGIS 3.24, if the \a expandGroupLayers option is TRUE then group layers will be converted to
+     * all their child layers.
+     *
      * \see setLayers()
      */
-    QList<QgsMapLayer *> layers() const;
+    QList<QgsMapLayer *> layers( bool expandGroupLayers = false ) const;
 
     /**
      * Freeze/thaw the map canvas. This is used to prevent the canvas from
@@ -1413,6 +1421,17 @@ class GUI_EXPORT QgsMapCanvas : public QGraphicsView, public QgsExpressionContex
 
     QMetaObject::Connection mScreenDpiChangedConnection;
 
+    std::unique_ptr< QgsTemporaryCursorOverride > mTemporaryCursorOverride;
+
+    /**
+     * This attribute maps error strings occurred during rendering with time.
+     * The string contains the layerId with the error message ("layerId:error").
+     * This is used to avoid propagatation of repeated error message from renderer
+     * in a short time range (\see notifyRendererErrors())
+     *
+     */
+    QMap <QString, QDateTime> mRendererErrors;
+
     /**
      * Returns the last cursor position on the canvas in geographical coordinates
      * \since QGIS 3.4
@@ -1482,6 +1501,12 @@ class GUI_EXPORT QgsMapCanvas : public QGraphicsView, public QgsExpressionContex
     void clearElevationCache();
 
     void showContextMenu( QgsMapMouseEvent *event );
+
+    /**
+     * This private method is used to emit rendering error from map layer without throwing it for every render.
+     * It contains a mechanism that does not emit the error if the same error from the same layer was emitted less than 1 mn ago.
+     */
+    void notifyRendererErrors( const QgsMapRendererJob::Errors &errors );
 
     friend class TestQgsMapCanvas;
 

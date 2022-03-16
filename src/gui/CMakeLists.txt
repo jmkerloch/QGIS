@@ -212,6 +212,9 @@ set(QGIS_GUI_SRCS
   editorwidgets/qgsvaluerelationsearchwidgetwrapper.cpp
   editorwidgets/qgsvaluerelationwidgetfactory.cpp
 
+  history/qgshistoryprovider.cpp
+  history/qgshistoryproviderregistry.cpp
+
   labeling/qgslabelengineconfigdialog.cpp
   labeling/qgslabelinggui.cpp
   labeling/qgslabelingwidget.cpp
@@ -285,6 +288,10 @@ set(QGIS_GUI_SRCS
 
   locator/qgslocatorwidget.cpp
 
+  maptools/qgsmaptoolshapeabstract.cpp
+  maptools/qgsmaptoolcapturelayergeometry.cpp
+  maptools/qgsmaptoolshaperegistry.cpp
+
   mesh/qgsmeshlayerproperties.cpp
   mesh/qgsrenderermeshpropertieswidget.cpp
   mesh/qgsmeshdatasetgrouptreewidget.cpp
@@ -316,12 +323,15 @@ set(QGIS_GUI_SRCS
   processing/qgsprocessingaggregatewidgetwrapper.cpp
   processing/qgsprocessingalgorithmconfigurationwidget.cpp
   processing/qgsprocessingalgorithmdialogbase.cpp
+  processing/qgsprocessingbatchalgorithmdialogbase.cpp
   processing/qgsprocessingconfigurationwidgets.cpp
   processing/qgsprocessingdxflayerswidgetwrapper.cpp
   processing/qgsprocessingenummodelerwidget.cpp
   processing/qgsprocessingfeaturesourceoptionswidget.cpp
   processing/qgsprocessingfieldmapwidgetwrapper.cpp
   processing/qgsprocessingguiregistry.cpp
+  processing/qgsprocessinghelpeditorwidget.cpp
+  processing/qgsprocessinghistoryprovider.cpp
   processing/qgsprocessingmaplayercombobox.cpp
   processing/qgsprocessingmatrixmodelerwidget.cpp
   processing/qgsprocessingmatrixparameterdialog.cpp
@@ -434,6 +444,7 @@ set(QGIS_GUI_SRCS
   qgsconfigureshortcutsdialog.cpp
   qgscoordinateboundspreviewmapwidget.cpp
   qgscoordinateoperationwidget.cpp
+  qgscrsdefinitionwidget.cpp
   qgscredentialdialog.cpp
   qgscustomdrophandler.cpp
   qgscustomprojectopenhandler.cpp
@@ -471,6 +482,7 @@ set(QGIS_GUI_SRCS
   qgsfieldmappingwidget.cpp
   qgsfieldmappingmodel.cpp
   qgsfeaturelistcombobox.cpp
+  qgsfielddomainwidget.cpp
   qgsfieldvalidator.cpp
   qgsfieldvalueslineedit.cpp
   qgsfilecontentsourcelineedit.cpp
@@ -496,6 +508,7 @@ set(QGIS_GUI_SRCS
   qgshighlightablelineedit.cpp
   qgshistogramwidget.cpp
   qgshelp.cpp
+  qgshttpheaderwidget.cpp
   qgsidentifymenu.cpp
   qgsimagedroptextedit.cpp
   qgsinstallgridshiftdialog.cpp
@@ -530,6 +543,7 @@ set(QGIS_GUI_SRCS
   qgsmaptool.cpp
   qgsmaptooladvanceddigitizing.cpp
   qgsmaptoolcapture.cpp
+  qgsmaptoolcapturerubberband.cpp
   qgsmaptooledit.cpp
   qgsmaptooldigitizefeature.cpp
   qgsmaptoolemitpoint.cpp
@@ -615,6 +629,7 @@ set(QGIS_GUI_SRCS
   qgsstatusbar.cpp
   qgssymbolbutton.cpp
   qgssymbollayerselectionwidget.cpp
+  qgstableview.cpp
   qgstablewidgetbase.cpp
   qgstabwidget.cpp
   qgstablewidgetitem.cpp
@@ -684,6 +699,7 @@ set(QGIS_GUI_HDRS
   qgscoordinateboundspreviewmapwidget.h
   qgscoordinateoperationwidget.h
   qgscredentialdialog.h
+  qgscrsdefinitionwidget.h
   qgscurveeditorwidget.h
   qgscustomdrophandler.h
   qgscustomprojectopenhandler.h
@@ -719,6 +735,7 @@ set(QGIS_GUI_HDRS
   qgsfeaturelistcombobox.h
   qgsfeatureselectiondlg.h
   qgsfieldcombobox.h
+  qgsfielddomainwidget.h
   qgsfieldexpressionwidget.h
   qgsfieldmappingwidget.h
   qgsfieldmappingmodel.h
@@ -747,6 +764,7 @@ set(QGIS_GUI_HDRS
   qgshighlightablecombobox.h
   qgshighlightablelineedit.h
   qgshistogramwidget.h
+  qgshttpheaderwidget.h
   qgsidentifymenu.h
   qgsimagedroptextedit.h
   qgsinstallgridshiftdialog.h
@@ -781,6 +799,7 @@ set(QGIS_GUI_HDRS
   qgsmaptool.h
   qgsmaptooladvanceddigitizing.h
   qgsmaptoolcapture.h
+  qgsmaptoolcapturerubberband.h
   qgsmaptooldigitizefeature.h
   qgsmaptooledit.h
   qgsmaptoolemitpoint.h
@@ -871,6 +890,7 @@ set(QGIS_GUI_HDRS
   qgssubstitutionlistwidget.h
   qgssymbolbutton.h
   qgssymbollayerselectionwidget.h
+  qgstableview.h
   qgstablewidgetbase.h
   qgstablewidgetitem.h
   qgstabwidget.h
@@ -1031,6 +1051,9 @@ set(QGIS_GUI_HDRS
   effects/qgspainteffectpropertieswidget.h
   effects/qgspainteffectwidget.h
 
+  history/qgshistoryprovider.h
+  history/qgshistoryproviderregistry.h
+
   labeling/qgslabelengineconfigdialog.h
   labeling/qgslabelinggui.h
   labeling/qgslabelingwidget.h
@@ -1104,6 +1127,10 @@ set(QGIS_GUI_HDRS
 
   locator/qgslocatorwidget.h
 
+  maptools/qgsmaptoolshapeabstract.h
+  maptools/qgsmaptoolcapturelayergeometry.h
+  maptools/qgsmaptoolshaperegistry.h
+
   mesh/qgsmeshlayerproperties.h
   mesh/qgsrenderermeshpropertieswidget.h
   mesh/qgsmeshdatasetgrouptreeview.h
@@ -1135,6 +1162,7 @@ set(QGIS_GUI_HDRS
   processing/qgsprocessingaggregatewidgetwrapper.h
   processing/qgsprocessingalgorithmconfigurationwidget.h
   processing/qgsprocessingalgorithmdialogbase.h
+  processing/qgsprocessingbatchalgorithmdialogbase.h
   processing/qgsprocessingconfigurationwidgets.h
   processing/qgsprocessingdxflayerswidgetwrapper.h
   processing/qgsprocessingenummodelerwidget.h
@@ -1142,6 +1170,8 @@ set(QGIS_GUI_HDRS
   processing/qgsprocessingfieldmapwidgetwrapper.h
   processing/qgsprocessinggui.h
   processing/qgsprocessingguiregistry.h
+  processing/qgsprocessinghelpeditorwidget.h
+  processing/qgsprocessinghistoryprovider.h
   processing/qgsprocessingmaplayercombobox.h
   processing/qgsprocessingmatrixmodelerwidget.h
   processing/qgsprocessingmatrixparameterdialog.h
@@ -1340,6 +1370,7 @@ set(QGIS_GUI_UI_HDRS
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsauthsslimporterrors.h
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsauthtrustedcasdialog.h
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgscredentialdialog.h
+  ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgscrsdefinitionwidgetbase.h
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsdetaileditemwidgetbase.h
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsexpressionbuilderdialogbase.h
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsexpressionstoredialogbase.h
@@ -1347,6 +1378,7 @@ set(QGIS_GUI_UI_HDRS
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsexpressionselectiondialogbase.h
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsfeaturefilterwidget.h
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsgenericprojectionselectorbase.h
+  ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgshttpheaderwidget.h
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsmessagelogviewer.h
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsmessageviewer.h
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsnewvectortabledialogbase.h
@@ -1446,10 +1478,12 @@ target_include_directories(qgis_gui PUBLIC
   ${CMAKE_SOURCE_DIR}/src/gui/editorwidgets
   ${CMAKE_SOURCE_DIR}/src/gui/editorwidgets/core
   ${CMAKE_SOURCE_DIR}/src/gui/effects
+  ${CMAKE_SOURCE_DIR}/src/gui/history
   ${CMAKE_SOURCE_DIR}/src/gui/labeling
   ${CMAKE_SOURCE_DIR}/src/gui/layertree
   ${CMAKE_SOURCE_DIR}/src/gui/layout
   ${CMAKE_SOURCE_DIR}/src/gui/locator
+  ${CMAKE_SOURCE_DIR}/src/gui/maptools
   ${CMAKE_SOURCE_DIR}/src/gui/mesh
   ${CMAKE_SOURCE_DIR}/src/gui/numericformats
   ${CMAKE_SOURCE_DIR}/src/gui/ogr

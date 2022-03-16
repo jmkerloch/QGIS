@@ -114,12 +114,14 @@ void QgsTileDownloadManagerReplyWorkerObject::replyFinished()
   if ( reply->error() == QNetworkReply::NoError )
   {
     ++mManager->mStats.networkRequestsOk;
-
     data = reply->readAll();
   }
   else
   {
     ++mManager->mStats.networkRequestsFailed;
+    const QString contentType = reply->header( QNetworkRequest::ContentTypeHeader ).toString();
+    if ( contentType.startsWith( QLatin1String( "text/plain" ) ) )
+      data = reply->readAll();
   }
 
   emit finished( data, reply->error(), reply->errorString() );
@@ -220,7 +222,7 @@ bool QgsTileDownloadManager::waitForPendingRequests( int msec )
       if ( mQueue.isEmpty() )
         return true;
     }
-    QThread::currentThread()->usleep( 1000 );
+    QThread::usleep( 1000 );
   }
 
   return false;
@@ -247,7 +249,7 @@ void QgsTileDownloadManager::shutdown()
         return;  // the thread has stopped
     }
 
-    QThread::currentThread()->usleep( 1000 );
+    QThread::usleep( 1000 );
   }
 }
 

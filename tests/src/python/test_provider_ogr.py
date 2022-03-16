@@ -1135,6 +1135,25 @@ class PyQgsOGRProvider(unittest.TestCase):
 
         self.assertEqual(vl.attributeAliases(), expected_alias_map)
 
+    @unittest.skipIf(int(gdal.VersionInfo('VERSION_NUM')) < GDAL_COMPUTE_VERSION(3, 3, 0), "GDAL 3.3 required")
+    def testFieldDomainNames(self):
+        """
+        Test that field domain names are taken from OGR where available (requires GDAL 3.3 or later)
+        """
+        datasource = os.path.join(unitTestDataPath(), 'domains.gpkg')
+        vl = QgsVectorLayer(datasource, 'test', 'ogr')
+        self.assertTrue(vl.isValid())
+
+        fields = vl.fields()
+        self.assertEqual(fields.field('with_range_domain_int').constraints().domainName(), 'range_domain_int')
+        self.assertEqual(fields.field('with_glob_domain').constraints().domainName(), 'glob_domain')
+
+        datasource = os.path.join(unitTestDataPath(), 'gps_timestamp.gpkg')
+        vl = QgsVectorLayer(datasource, 'test', 'ogr')
+        self.assertTrue(vl.isValid())
+        fields = vl.fields()
+        self.assertFalse(fields.field('stringf').constraints().domainName())
+
     def testGdbLayerMetadata(self):
         """
         Test that we translate GDB metadata to QGIS layer metadata on loading a GDB source
@@ -1200,7 +1219,7 @@ class PyQgsOGRProvider(unittest.TestCase):
         """Test issue GH #39230, this is not really specific to GPKG"""
 
         project = QgsProject()
-        project.setAutoTransaction(True)
+        project.setTransactionMode(Qgis.TransactionMode.AutomaticGroups)
         tmpfile = os.path.join(
             self.basetestpath, 'tempGeoPackageTransactionExpressionFields.gpkg')
         ds = ogr.GetDriverByName('GPKG').CreateDataSource(tmpfile)
@@ -1723,12 +1742,20 @@ class PyQgsOGRProvider(unittest.TestCase):
         self.assertEqual(res[0].layerNumber(), 0)
         self.assertEqual(res[0].name(), "multipatch")
         self.assertEqual(res[0].description(), '')
-        self.assertEqual(res[0].uri(), TEST_DATA_DIR + "/multipatch.shp|geometrytype=Polygon")
+        self.assertEqual(res[0].uri(), TEST_DATA_DIR + "/multipatch.shp|geometrytype=Polygon25D")
         self.assertEqual(res[0].providerKey(), "ogr")
         self.assertEqual(res[0].type(), QgsMapLayerType.VectorLayer)
-        self.assertEqual(res[0].wkbType(), QgsWkbTypes.Polygon)
+        self.assertEqual(res[0].wkbType(), QgsWkbTypes.PolygonZ)
         self.assertEqual(res[0].geometryColumnName(), '')
         self.assertEqual(res[0].driverName(), 'ESRI Shapefile')
+
+        # check a feature
+        vl = res[0].toLayer(options)
+        self.assertTrue(vl.isValid())
+        feature = next(vl.getFeatures())
+        self.assertEqual(feature.geometry().wkbType(), QgsWkbTypes.MultiPolygonZ)
+        self.assertEqual(feature.geometry().asWkt(), 'MultiPolygonZ (((0 0 0, 0 1 0, 1 1 0, 0 0 0)),((0 0 0, 1 1 0, 1 0 0,'
+                                                     ' 0 0 0)),((0 0 0, 0 -1 0, 1 -1 0, 0 0 0)),((0 0 0, 1 -1 0, 1 0 0, 0 0 0)))')
 
         # single layer geopackage -- sublayers MUST have the layerName set on the uri,
         # in case more layers are added in future to the gpkg
@@ -2462,6 +2489,37 @@ class PyQgsOGRProvider(unittest.TestCase):
         self.assertEqual(f.geometry().asWkt(), 'Point (1 1)')
         f = vl.getFeature(2)
         self.assertEqual(f.geometry().asWkt(), 'Point (2 2)')
+
+    def test_provider_dxf_3d(self):
+        """Test issue GH #45938"""
+
+        metadata = QgsProviderRegistry.instance().providerMetadata('ogr')
+        layers = metadata.querySublayers(os.path.join(TEST_DATA_DIR, 'points_lines_3d.dxf'),
+                                         Qgis.SublayerQueryFlag.ResolveGeometryType)
+
+        options = QgsProviderSublayerDetails.LayerOptions(QgsCoordinateTransformContext())
+
+        for ld in layers:
+            if ld.wkbType() == QgsWkbTypes.PointZ:
+                point_layer = ld.toLayer(options)
+            if ld.wkbType() == QgsWkbTypes.LineStringZ:
+                polyline_layer = ld.toLayer(options)
+
+        self.assertTrue(point_layer.isValid())
+        self.assertEqual(point_layer.featureCount(), 11)
+        feature = next(point_layer.getFeatures())
+        self.assertTrue(feature.isValid())
+        self.assertEqual(feature.geometry().wkbType(), QgsWkbTypes.Point25D)
+        self.assertEqual(feature.geometry().asWkt(),
+                         'PointZ (635660.10747100005391985 1768912.79759799991734326 3.36980799999999991)')
+
+        self.assertTrue(polyline_layer.isValid())
+        self.assertEqual(polyline_layer.featureCount(), 2)
+        feature = next(polyline_layer.getFeatures())
+        self.assertTrue(feature.isValid())
+        self.assertEqual(feature.geometry().wkbType(), QgsWkbTypes.LineString25D)
+        self.assertEqual(feature.geometry().vertexAt(1).asWkt(),
+                         'PointZ (635660.11699699994642287 1768910.93880999996326864 3.33884099999999995)')
 
 
 if __name__ == '__main__':

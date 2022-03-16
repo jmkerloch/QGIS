@@ -235,6 +235,34 @@ void TestQgsMeshEditor::createTopologicMesh()
   QVERIFY( checkFacesAround( topologicMesh, 5, {3} ) );
 
   QVERIFY( topologicMesh.checkConsistency() == QgsMeshEditingError() );
+
+  QgsMeshVertexCirculator circulator0( topologicMesh, 0 );
+  QVERIFY( circulator0.isValid() );
+  QCOMPARE( circulator0.degree(), 2 );
+
+  QgsMeshVertexCirculator circulator1( topologicMesh, 1 );
+  QVERIFY( circulator1.isValid() );
+  QCOMPARE( circulator1.degree(), 3 );
+
+  QgsMeshVertexCirculator circulator2( topologicMesh, 2 );
+  QVERIFY( circulator2.isValid() );
+  QCOMPARE( circulator2.degree(), 3 );
+
+  QgsMeshVertexCirculator circulator3( topologicMesh, 3 );
+  QVERIFY( circulator3.isValid() );
+  QCOMPARE( circulator3.degree(), 4 );
+
+  QgsMeshVertexCirculator circulator4( topologicMesh, 4 );
+  QVERIFY( circulator4.isValid() );
+  QCOMPARE( circulator4.degree(), 4 );
+
+  QgsMeshVertexCirculator circulator5( topologicMesh, 5 );
+  QVERIFY( circulator5.isValid() );
+  QCOMPARE( circulator5.degree(), 2 );
+
+  QgsMeshVertexCirculator circulator6( topologicMesh, 6 ); //no vertices with index 6
+  QVERIFY( !circulator6.isValid() );
+  QCOMPARE( circulator6.degree(), 0 );
 }
 
 void TestQgsMeshEditor::editTopologicMesh()
@@ -280,12 +308,12 @@ void TestQgsMeshEditor::editTopologicMesh()
 
   QVector<QgsMeshFace> faces;
   faces = {{5, 7, 6}};
-  topologicFaces = topologicalMesh.createNewTopologicalFaces( faces, true, error );
+  topologicFaces = QgsTopologicalMesh::createNewTopologicalFaces( faces, true, error );
   QVERIFY( topologicalMesh.facesCanBeAdded( topologicFaces ) ==
            QgsMeshEditingError( Qgis::MeshEditingErrorType::UniqueSharedVertex, 5 ) );
 
   faces = {{5, 7, 6, 4}};
-  topologicFaces = topologicalMesh.createNewTopologicalFaces( faces, true, error );
+  topologicFaces = QgsTopologicalMesh::createNewTopologicalFaces( faces, true, error );
   QVERIFY( topologicalMesh.facesCanBeAdded( topologicFaces ) == QgsMeshEditingError() );
 
   faces =
@@ -299,7 +327,7 @@ void TestQgsMeshEditor::editTopologicMesh()
     {11, 5, 3},   // 6
   };
 
-  topologicFaces = topologicalMesh.createNewTopologicalFaces( faces, true, error );
+  topologicFaces = QgsTopologicalMesh::createNewTopologicalFaces( faces, true, error );
 
   QVERIFY( topologicalMesh.facesCanBeAdded( topologicFaces ) == QgsMeshEditingError() );
 
@@ -314,7 +342,7 @@ void TestQgsMeshEditor::editTopologicMesh()
     {11, 5, 3},   // 6
   };
 
-  topologicFaces = topologicalMesh.createNewTopologicalFaces( faces, true, error );
+  topologicFaces = QgsTopologicalMesh::createNewTopologicalFaces( faces, true, error );
   QVERIFY( topologicalMesh.facesCanBeAdded( topologicFaces ).errorType ==  Qgis::MeshEditingErrorType::UniqueSharedVertex );
   QCOMPARE( topologicalMesh.freeVerticesIndexes().count(), 6 );
 
@@ -330,7 +358,7 @@ void TestQgsMeshEditor::editTopologicMesh()
     {5, 6, 4}     // face added to fixe the first one
   };
 
-  topologicFaces = topologicalMesh.createNewTopologicalFaces( faces, true, error );
+  topologicFaces = QgsTopologicalMesh::createNewTopologicalFaces( faces, true, error );
   QVERIFY( topologicalMesh.facesCanBeAdded( topologicFaces ) == QgsMeshEditingError() );
 
   faces =
@@ -343,13 +371,13 @@ void TestQgsMeshEditor::editTopologicMesh()
     {11, 3, 0},   // 5
   };
 
-  topologicFaces = topologicalMesh.createNewTopologicalFaces( faces, true, error );
+  topologicFaces = QgsTopologicalMesh::createNewTopologicalFaces( faces, true, error );
   QVERIFY( error == QgsMeshEditingError() );
   error = topologicalMesh.facesCanBeAdded( topologicFaces );
   QVERIFY( error == QgsMeshEditingError( Qgis::MeshEditingErrorType::ManifoldFace, 0 ) );
 
   faces = {{5, 7, 6, 4}};
-  topologicFaces = topologicalMesh.createNewTopologicalFaces( faces, true, error );
+  topologicFaces = QgsTopologicalMesh::createNewTopologicalFaces( faces, true, error );
   QVERIFY( topologicalMesh.facesCanBeAdded( topologicFaces ) == QgsMeshEditingError() );
   topologicalChanges.append( topologicalMesh.addFaces( topologicFaces ) ) ;
 
@@ -391,7 +419,7 @@ void TestQgsMeshEditor::editTopologicMesh()
     {11, 5, 3},   // 6
   };
 
-  topologicFaces = topologicalMesh.createNewTopologicalFaces( faces, true, error );
+  topologicFaces = QgsTopologicalMesh::createNewTopologicalFaces( faces, true, error );
   QVERIFY( topologicalMesh.facesCanBeAdded( topologicFaces ) == QgsMeshEditingError() );
   topologicalChanges.append( topologicalMesh.addFaces( topologicFaces ) ) ;
 
@@ -539,7 +567,7 @@ void TestQgsMeshEditor::editTopologicMesh()
 
   QVERIFY( checkFacesAround( topologicalMesh, 12, {11, 12, 13, 14} ) );
 
-  topologicFaces = topologicalMesh.createNewTopologicalFaces( {{4, 8, 9}, {0, 3, 2, 1}}, true, error );
+  topologicFaces = QgsTopologicalMesh::createNewTopologicalFaces( {{4, 8, 9}, {0, 3, 2, 1}}, true, error );
   QVERIFY( error == QgsMeshEditingError() );
   topologicalChanges.append( topologicalMesh.addFaces( topologicFaces ) );
   QVERIFY( checkFacesAround( topologicalMesh, 9, {7, 6, 15} ) );
@@ -930,7 +958,7 @@ void TestQgsMeshEditor::particularCases()
 
     const QVector<QgsMeshFace> facesToAdd( {{0, 1, 2}, {0, 2, 6}, {1, 3, 2}, {2, 3, 4}} );
 
-    const QgsTopologicalMesh::TopologicalFaces topologicFaces = meshEditor.mTopologicalMesh.createNewTopologicalFaces( facesToAdd, true, error );
+    const QgsTopologicalMesh::TopologicalFaces topologicFaces = QgsTopologicalMesh::createNewTopologicalFaces( facesToAdd, true, error );
     QVERIFY( error == QgsMeshEditingError() );
     error = meshEditor.mTopologicalMesh.facesCanBeAdded( topologicFaces );
     QVERIFY( error == QgsMeshEditingError( Qgis::MeshEditingErrorType::ManifoldFace, 2 ) );
@@ -962,7 +990,7 @@ void TestQgsMeshEditor::particularCases()
 
     const QVector<QgsMeshFace> facesToAdd( {{1, 6, 0}, {1, 2, 6}, {2, 3, 6}, {3, 4, 6 }, {1, 3, 2} } );
 
-    const QgsTopologicalMesh::TopologicalFaces topologicFaces = meshEditor.mTopologicalMesh.createNewTopologicalFaces( facesToAdd, true, error );
+    const QgsTopologicalMesh::TopologicalFaces topologicFaces = QgsTopologicalMesh::createNewTopologicalFaces( facesToAdd, true, error );
     QVERIFY( error == QgsMeshEditingError() );
     error = meshEditor.mTopologicalMesh.facesCanBeAdded( topologicFaces );
     QVERIFY( error == QgsMeshEditingError( Qgis::MeshEditingErrorType::ManifoldFace, 4 ) );
@@ -1121,7 +1149,7 @@ void TestQgsMeshEditor::particularCases()
     QCOMPARE( mesh.faceCount(), 8 );
 
     // with adding a face to make vertex 2 not an boundary anymore
-    QgsTopologicalMesh::Changes addFaceChanges = topologicMesh.addFaces( topologicMesh.createNewTopologicalFaces( {{2, 7, 8}}, false, error ) );
+    QgsTopologicalMesh::Changes addFaceChanges = topologicMesh.addFaces( QgsTopologicalMesh::createNewTopologicalFaces( {{2, 7, 8}}, false, error ) );
     Q_ASSERT( error == QgsMeshEditingError() );
 
     changes = topologicMesh.removeVertexFillHole( 5 );
@@ -1209,7 +1237,7 @@ void TestQgsMeshEditor::particularCases()
     QCOMPARE( changes.addedFaces().count(), 0 );
 
     // try adding a face, not sufficient
-    QgsTopologicalMesh::Changes addFaceChanges = topologicalMesh.addFaces( topologicalMesh.createNewTopologicalFaces( {{1, 6, 7}}, true, error ) );
+    QgsTopologicalMesh::Changes addFaceChanges = topologicalMesh.addFaces( QgsTopologicalMesh::createNewTopologicalFaces( {{1, 6, 7}}, true, error ) );
     Q_ASSERT( error == QgsMeshEditingError() );
 
     changes = topologicalMesh.removeVertexFillHole( 5 );
@@ -1228,7 +1256,7 @@ void TestQgsMeshEditor::particularCases()
 
     // try adding two faces, not sufficient
     QgsTopologicalMesh::Changes add2FacesChanges =
-    topologicalMesh.addFaces( topologicalMesh.createNewTopologicalFaces( {{1, 6, 7}, {2, 7, 8}}, true, error ) );
+    topologicalMesh.addFaces( QgsTopologicalMesh::createNewTopologicalFaces( {{1, 6, 7}, {2, 7, 8}}, true, error ) );
     Q_ASSERT( error == QgsMeshEditingError() );
 
     changes = topologicalMesh.removeVertexFillHole( 5 );
@@ -1247,7 +1275,7 @@ void TestQgsMeshEditor::particularCases()
 
     // try adding three faces, good
     QgsTopologicalMesh::Changes add3FacesChanges =
-    topologicalMesh.addFaces( topologicalMesh.createNewTopologicalFaces( {{1, 6, 7}, {2, 7, 8}, {3, 8, 9}}, true, error ) );
+    topologicalMesh.addFaces( QgsTopologicalMesh::createNewTopologicalFaces( {{1, 6, 7}, {2, 7, 8}, {3, 8, 9}}, true, error ) );
     Q_ASSERT( error == QgsMeshEditingError() );
 
     changes = topologicalMesh.removeVertexFillHole( 5 );

@@ -98,6 +98,11 @@ QgsMapLayer::QgsMapLayer( QgsMapLayerType type,
 
 QgsMapLayer::~QgsMapLayer()
 {
+  if ( project() && project()->pathResolver().writePath( mDataSource ).startsWith( "attachment:" ) )
+  {
+    project()->removeAttachedFile( mDataSource );
+  }
+
   delete m3DRenderer;
   delete mLegend;
   delete mStyleManager;
@@ -2250,7 +2255,8 @@ QgsRectangle QgsMapLayer::wgs84Extent( bool forceRecalculate ) const
   }
   else if ( ! mExtent.isNull() )
   {
-    const QgsCoordinateTransform transformer { crs(), QgsCoordinateReferenceSystem::fromOgcWmsCrs( geoEpsgCrsAuthId() ), transformContext() };
+    QgsCoordinateTransform transformer { crs(), QgsCoordinateReferenceSystem::fromOgcWmsCrs( geoEpsgCrsAuthId() ), transformContext() };
+    transformer.setBallparkTransformsAreAppropriate( true );
     try
     {
       wgs84Extent = transformer.transformBoundingBox( mExtent );

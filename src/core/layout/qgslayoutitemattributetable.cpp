@@ -25,6 +25,8 @@
 #include "qgslayoutframe.h"
 #include "qgsproject.h"
 #include "qgsrelationmanager.h"
+#include "qgsfieldformatter.h"
+#include "qgsfieldformatterregistry.h"
 #include "qgsgeometry.h"
 #include "qgsexception.h"
 #include "qgsmapsettings.h"
@@ -387,6 +389,7 @@ void QgsLayoutItemAttributeTable::restoreFieldAliasMap( const QMap<int, QString>
 bool QgsLayoutItemAttributeTable::getTableContents( QgsLayoutTableContents &contents )
 {
   contents.clear();
+  mLayerCache.clear();
 
   QgsVectorLayer *layer = sourceLayer();
   if ( !layer )
@@ -431,10 +434,12 @@ bool QgsLayoutItemAttributeTable::getTableContents( QgsLayoutTableContents &cont
     visibleRegion = QgsGeometry::fromQPolygonF( mMap->visibleExtentPolygon() );
     selectionRect = visibleRegion.boundingBox();
     //transform back to layer CRS
-    QgsCoordinateTransform coordTransform( layer->crs(), mMap->crs(), mLayout->project() );
+    const QgsCoordinateTransform coordTransform( layer->crs(), mMap->crs(), mLayout->project() );
+    QgsCoordinateTransform extentTransform = coordTransform;
+    extentTransform.setBallparkTransformsAreAppropriate( true );
     try
     {
-      selectionRect = coordTransform.transformBoundingBox( selectionRect, Qgis::TransformDirection::Reverse );
+      selectionRect = extentTransform.transformBoundingBox( selectionRect, Qgis::TransformDirection::Reverse );
       visibleRegion.transform( coordTransform, Qgis::TransformDirection::Reverse );
     }
     catch ( QgsCsException &cse )
@@ -566,7 +571,8 @@ bool QgsLayoutItemAttributeTable::getTableContents( QgsLayoutTableContents &cont
 
       if ( idx != -1 )
       {
-        const QVariant val = f.attributes().at( idx );
+
+        QVariant val = f.attributes().at( idx );
 
         if ( mUseConditionalStyling )
         {
@@ -576,7 +582,28 @@ bool QgsLayoutItemAttributeTable::getTableContents( QgsLayoutTableContents &cont
           style = QgsConditionalStyle::compressStyles( styles );
         }
 
-        QVariant v = replaceWrapChar( val );
+        const QgsEditorWidgetSetup setup = layer->fields().at( idx ).editorWidgetSetup();
+
+        if ( ! setup.isNull() )
+        {
+          QgsFieldFormatter *fieldFormatter = QgsApplication::fieldFormatterRegistry()->fieldFormatter( setup.type() );
+          QVariant cache;
+
+          auto it = mLayerCache.constFind( column.attribute() );
+          if ( it != mLayerCache.constEnd() )
+          {
+            cache = it.value();
+          }
+          else
+          {
+            cache = fieldFormatter->createCache( mVectorLayer.get(), idx, setup.config() );
+            mLayerCache.insert( column.attribute(), cache );
+          }
+
+          val = fieldFormatter->representValue( mVectorLayer.get(), idx, setup.config(), cache, val );
+        }
+
+        QVariant v = val.isNull() ? QString() : replaceWrapChar( val );
         currentRow << Cell( v, style, f );
         rowContents << v;
       }

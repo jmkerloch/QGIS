@@ -34,6 +34,7 @@
 #include "qgspainteffect.h"
 #include "qgsfeaturefilterprovider.h"
 #include "qgsexception.h"
+#include "qgslabelsink.h"
 #include "qgslogger.h"
 #include "qgssettingsregistrycore.h"
 #include "qgsexpressioncontextutils.h"
@@ -319,18 +320,20 @@ bool QgsVectorLayerRenderer::renderInternal( QgsFeatureRenderer *renderer )
 
     const QgsMapToPixel &mtp = context.mapToPixel();
     map2pixelTol *= mtp.mapUnitsPerPixel();
-    QgsCoordinateTransform ct = context.coordinateTransform();
+    const QgsCoordinateTransform ct = context.coordinateTransform();
 
     // resize the tolerance using the change of size of an 1-BBOX from the source CoordinateSystem to the target CoordinateSystem
     if ( ct.isValid() && !ct.isShortCircuited() )
     {
       try
       {
+        QgsCoordinateTransform toleranceTransform = ct;
         QgsPointXY center = context.extent().center();
-        double rectSize = ct.sourceCrs().isGeographic() ? 0.0008983 /* ~100/(40075014/360=111319.4833) */ : 100;
+        double rectSize = toleranceTransform.sourceCrs().mapUnits() == QgsUnitTypes::DistanceDegrees ? 0.0008983 /* ~100/(40075014/360=111319.4833) */ : 100;
 
         QgsRectangle sourceRect = QgsRectangle( center.x(), center.y(), center.x() + rectSize, center.y() + rectSize );
-        QgsRectangle targetRect = ct.transform( sourceRect );
+        toleranceTransform.setBallparkTransformsAreAppropriate( true );
+        QgsRectangle targetRect = toleranceTransform.transform( sourceRect );
 
         QgsDebugMsgLevel( QStringLiteral( "Simplify - SourceTransformRect=%1" ).arg( sourceRect.toString( 16 ) ), 4 );
         QgsDebugMsgLevel( QStringLiteral( "Simplify - TargetTransformRect=%1" ).arg( targetRect.toString( 16 ) ), 4 );
@@ -459,7 +462,15 @@ void QgsVectorLayerRenderer::drawRenderer( QgsFeatureRenderer *renderer, QgsFeat
       bool drawMarker = isMainRenderer && ( mDrawVertexMarkers && context.drawEditingInformation() && ( !mVertexMarkerOnlyForSelection || sel ) );
 
       // render feature
-      bool rendered = renderer->renderFeature( fet, context, -1, sel, drawMarker );
+      bool rendered = false;
+      if ( !context.testFlag( Qgis::RenderContextFlag::SkipSymbolRendering ) )
+      {
+        rendered = renderer->renderFeature( fet, context, -1, sel, drawMarker );
+      }
+      else
+      {
+        rendered = renderer->willRenderFeature( fet, context );
+      }
 
       // labeling - register feature
       if ( rendered )
@@ -573,11 +584,14 @@ void QgsVectorLayerRenderer::drawRendererLevels( QgsFeatureRenderer *renderer, Q
       continue;
     }
 
-    if ( !features.contains( sym ) )
+    if ( !context.testFlag( Qgis::RenderContextFlag::SkipSymbolRendering ) )
     {
-      features.insert( sym, QList<QgsFeature>() );
+      if ( !features.contains( sym ) )
+      {
+        features.insert( sym, QList<QgsFeature>() );
+      }
+      features[sym].append( fet );
     }
-    features[sym].append( fet );
 
     // new labeling engine
     if ( isMainRenderer && context.labelingEngine() && ( mLabelProvider || mDiagramProvider ) )
@@ -713,7 +727,22 @@ void QgsVectorLayerRenderer::prepareLabeling( QgsVectorLayer *layer, QSet<QStrin
   {
     if ( layer->labelsEnabled() )
     {
-      mLabelProvider = layer->labeling()->provider( layer );
+      if ( context.labelSink() )
+      {
+        if ( const QgsRuleBasedLabeling *rbl = dynamic_cast<const QgsRuleBasedLabeling *>( layer->labeling() ) )
+        {
+          mLabelProvider = new QgsRuleBasedLabelSinkProvider( *rbl, layer, context.labelSink() );
+        }
+        else
+        {
+          QgsPalLayerSettings settings = layer->labeling()->settings();
+          mLabelProvider = new QgsLabelSinkProvider( layer, QString(), context.labelSink(), &settings );
+        }
+      }
+      else
+      {
+        mLabelProvider = layer->labeling()->provider( layer );
+      }
       if ( mLabelProvider )
       {
         engine2->addProvider( mLabelProvider );

@@ -45,7 +45,13 @@ from qgis.core import (
     QgsRenderChecker,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
-    QgsArrowSymbolLayer
+    QgsArrowSymbolLayer,
+    QgsFeature,
+    QgsGeometry,
+    QgsFontMarkerSymbolLayer,
+    QgsFontUtils,
+    QgsSymbolLayer,
+    QgsProperty
 )
 
 from qgis.testing import start_app, unittest
@@ -269,6 +275,45 @@ class TestQgsGeometryGeneratorSymbolLayerV2(unittest.TestCase):
         self.report += renderchecker.report()
         self.assertTrue(res)
 
+    def test_generator_with_multipart_result_with_generator_subsymbol(self):
+        """
+        Test that generator subsymbol of generator renders all parts of multipart geometry results
+        """
+        lines = QgsVectorLayer('MultiLineString?crs=epsg:4326', 'Lines', 'memory')
+        self.assertTrue(lines.isValid())
+        f = QgsFeature()
+        f.setGeometry(QgsGeometry.fromWkt('MultiLineString((1 1, 2 1, 2 2),(3 1, 3 2, 4 2))'))
+        lines.dataProvider().addFeature(f)
+
+        sym = QgsLineSymbol.createSimple({'color': '#fffdbf6f', 'outline_width': 1})
+
+        parent_generator = QgsGeometryGeneratorSymbolLayer.create({'geometryModifier': 'segments_to_lines($geometry)'})
+        parent_generator.setSymbolType(QgsSymbol.Line)
+
+        child_generator = QgsGeometryGeneratorSymbolLayer.create({'geometryModifier': 'collect_geometries(offset_curve($geometry, -2), offset_curve($geometry,2))'})
+        child_generator.setUnits(QgsUnitTypes.RenderMillimeters)
+        child_generator.setSymbolType(QgsSymbol.Line)
+        child_generator.setSubSymbol(sym)
+
+        child_symbol = QgsLineSymbol()
+        child_symbol.changeSymbolLayer(0, child_generator)
+        parent_generator.setSubSymbol(child_symbol)
+
+        geom_symbol = QgsLineSymbol()
+        geom_symbol.changeSymbolLayer(0, parent_generator)
+        lines.renderer().setSymbol(geom_symbol)
+
+        mapsettings = QgsMapSettings(self.mapsettings)
+        mapsettings.setExtent(lines.extent())
+        mapsettings.setLayers([lines])
+
+        renderchecker = QgsMultiRenderChecker()
+        renderchecker.setMapSettings(mapsettings)
+        renderchecker.setControlName('expected_geometrygenerator_multipart_subsymbol')
+        res = renderchecker.runTest('geometrygenerator_multipart_subsymbol')
+        self.report += renderchecker.report()
+        self.assertTrue(res)
+
     def test_no_feature(self):
         """
         Test rendering as a pure symbol, no feature associated
@@ -366,6 +411,78 @@ class TestQgsGeometryGeneratorSymbolLayerV2(unittest.TestCase):
         renderchecker.setMapSettings(self.mapsettings)
         renderchecker.setControlName('expected_geometrygenerator_subsymbol')
         res = renderchecker.runTest('geometrygenerator_subsymbol')
+        self.report += renderchecker.report()
+        self.assertTrue(res)
+
+    def test_geometry_function(self):
+        """
+        The $geometry function used in a subsymbol should refer to the generated geometry
+        """
+        points = QgsVectorLayer('Point?crs=epsg:4326', 'Points', 'memory')
+        self.assertTrue(points.isValid())
+        f = QgsFeature()
+        f.setGeometry(QgsGeometry.fromWkt('Point(1 2)'))
+        points.dataProvider().addFeature(f)
+
+        font = QgsFontUtils.getStandardTestFont('Bold')
+        font_marker = QgsFontMarkerSymbolLayer(font.family(), 'x', 16)
+        font_marker.setDataDefinedProperty(QgsSymbolLayer.PropertyCharacter, QgsProperty.fromExpression('geom_to_wkt($geometry)'))
+        subsymbol = QgsMarkerSymbol()
+        subsymbol.changeSymbolLayer(0, font_marker)
+
+        parent_generator = QgsGeometryGeneratorSymbolLayer.create({'geometryModifier': 'translate($geometry, 1, 2)'})
+        parent_generator.setSymbolType(QgsSymbol.Marker)
+
+        parent_generator.setSubSymbol(subsymbol)
+
+        geom_symbol = QgsMarkerSymbol()
+        geom_symbol.changeSymbolLayer(0, parent_generator)
+        points.renderer().setSymbol(geom_symbol)
+
+        mapsettings = QgsMapSettings(self.mapsettings)
+        mapsettings.setExtent(QgsRectangle(0, 0, 5, 5))
+        mapsettings.setLayers([points])
+
+        renderchecker = QgsMultiRenderChecker()
+        renderchecker.setMapSettings(mapsettings)
+        renderchecker.setControlName('expected_geometrygenerator_function_geometry')
+        res = renderchecker.runTest('geometrygenerator_function_geometry')
+        self.report += renderchecker.report()
+        self.assertTrue(res)
+
+    def test_feature_geometry(self):
+        """
+        The geometry($currentfeature) expression used in a subsymbol should refer to the original FEATURE geometry
+        """
+        points = QgsVectorLayer('Point?crs=epsg:4326', 'Points', 'memory')
+        self.assertTrue(points.isValid())
+        f = QgsFeature()
+        f.setGeometry(QgsGeometry.fromWkt('Point(1 2)'))
+        points.dataProvider().addFeature(f)
+
+        font = QgsFontUtils.getStandardTestFont('Bold')
+        font_marker = QgsFontMarkerSymbolLayer(font.family(), 'x', 16)
+        font_marker.setDataDefinedProperty(QgsSymbolLayer.PropertyCharacter, QgsProperty.fromExpression('geom_to_wkt(geometry($currentfeature))'))
+        subsymbol = QgsMarkerSymbol()
+        subsymbol.changeSymbolLayer(0, font_marker)
+
+        parent_generator = QgsGeometryGeneratorSymbolLayer.create({'geometryModifier': 'translate($geometry, 1, 2)'})
+        parent_generator.setSymbolType(QgsSymbol.Marker)
+
+        parent_generator.setSubSymbol(subsymbol)
+
+        geom_symbol = QgsMarkerSymbol()
+        geom_symbol.changeSymbolLayer(0, parent_generator)
+        points.renderer().setSymbol(geom_symbol)
+
+        mapsettings = QgsMapSettings(self.mapsettings)
+        mapsettings.setExtent(QgsRectangle(0, 0, 5, 5))
+        mapsettings.setLayers([points])
+
+        renderchecker = QgsMultiRenderChecker()
+        renderchecker.setMapSettings(mapsettings)
+        renderchecker.setControlName('expected_geometrygenerator_feature_geometry')
+        res = renderchecker.runTest('geometrygenerator_feature_geometry')
         self.report += renderchecker.report()
         self.assertTrue(res)
 

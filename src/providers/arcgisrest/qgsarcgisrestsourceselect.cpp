@@ -79,7 +79,7 @@ QgsArcGisRestSourceSelect::QgsArcGisRestSourceSelect( QWidget *parent, Qt::Windo
   : QgsAbstractDataSourceWidget( parent, fl, widgetMode )
 {
   setupUi( this );
-  QgsGui::instance()->enableAutoGeometryRestore( this );
+  QgsGui::enableAutoGeometryRestore( this );
 
   connect( cmbConnections, static_cast<void ( QComboBox::* )( int )>( &QComboBox::activated ), this, &QgsArcGisRestSourceSelect::cmbConnections_activated );
   setupButtons( buttonBox );
@@ -314,7 +314,9 @@ void QgsArcGisRestSourceSelect::addButtonClicked()
   {
     try
     {
-      extent = QgsCoordinateTransform( canvasCrs, pCrs, QgsProject::instance()->transformContext() ).transform( extent );
+      QgsCoordinateTransform extentTransform = QgsCoordinateTransform( canvasCrs, pCrs, QgsProject::instance()->transformContext() );
+      extentTransform.setBallparkTransformsAreAppropriate( true );
+      extent = extentTransform.transformBoundingBox( extent );
       QgsDebugMsgLevel( QStringLiteral( "canvas transform: Canvas CRS=%1, Provider CRS=%2, BBOX=%3" )
                         .arg( canvasCrs.authid(), pCrs.authid(), extent.asWktCoordinates() ), 3 );
     }

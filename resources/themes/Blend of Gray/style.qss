@@ -227,7 +227,7 @@ QToolButton
     color:@text;
 }
 
-QPushButton[autoRaise=true], QToolButton[autoRaise=true] {
+QPushButton[flat=true], QPushButton[autoRaise=true], QToolButton[autoRaise=true] {
     border:1px solid rgba(0,0,0,0);
     background-color:transparent;
 }
@@ -562,14 +562,14 @@ QTabBar::tab:disabled {
     color: @itemalternativebackground
 }
 
-QTabBar::tab:last
+QTabBar::tab:last, QTabBar::tab::only-one
 {
-    margin-right: 0; /* the last selected tab has nothing to overlap with on the right */
+    margin-right: 0;
 }
 
 QTabBar::tab:first:!selected
 {
-    margin-left: 0px; /* the last selected tab has nothing to overlap with on the right */
+    margin-left: 0px;
 }
 
 QTabBar::tab:bottom {
@@ -965,6 +965,11 @@ QHeaderView::up-arrow {
 
 QToolButton:focus, QPushButton:focus, QCheckBox:focus, QRadioButton:focus, QGroupBox:focus {
     outline:1px solid @focusdark;
+    outline-radius: 0.2em;
+}
+
+QPushButton[flat=true], QPushButton[autoRaise=true], QToolButton[autoRaise=true] {
+    outline:1px solid rgba(0,0,0,0);
     outline-radius: 0.2em;
 }
 

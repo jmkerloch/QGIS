@@ -1780,6 +1780,7 @@ class GUI_EXPORT QgsProcessingMapLayerWidgetWrapper : public QgsAbstractProcessi
 
     QStringList compatibleOutputTypes() const override;
     QString modelerExpressionFormatString() const override;
+    QgsProcessingModelChildParameterSource::Source defaultModelSource( const QgsProcessingParameterDefinition *parameter ) const override;
 
   private:
 
@@ -2211,6 +2212,24 @@ class GUI_EXPORT QgsProcessingRasterDestinationWidgetWrapper : public QgsProcess
   public:
 
     QgsProcessingRasterDestinationWidgetWrapper( const QgsProcessingParameterDefinition *parameter = nullptr,
+        QgsProcessingGui::WidgetType type = QgsProcessingGui::Standard, QWidget *parent = nullptr );
+
+    // QgsProcessingParameterWidgetFactoryInterface
+    QString parameterType() const override;
+    QgsAbstractProcessingParameterWidgetWrapper *createWidgetWrapper( const QgsProcessingParameterDefinition *parameter, QgsProcessingGui::WidgetType type ) override;
+
+  protected:
+    QString modelerExpressionFormatString() const override;
+
+};
+
+class GUI_EXPORT QgsProcessingPointCloudDestinationWidgetWrapper : public QgsProcessingOutputWidgetWrapper
+{
+    Q_OBJECT
+
+  public:
+
+    QgsProcessingPointCloudDestinationWidgetWrapper( const QgsProcessingParameterDefinition *parameter = nullptr,
         QgsProcessingGui::WidgetType type = QgsProcessingGui::Standard, QWidget *parent = nullptr );
 
     // QgsProcessingParameterWidgetFactoryInterface

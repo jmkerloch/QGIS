@@ -1248,9 +1248,27 @@ QSizeF QgsWmsLegendNode::drawSymbol( const QgsLegendSettings &settings, ItemCont
 {
   Q_UNUSED( itemHeight )
 
+  const QImage image = getLegendGraphic();
+
+  double px2mm = 1000. / image.dotsPerMeterX();
+  double mmWidth = image.width() * px2mm;
+  double mmHeight = image.height() * px2mm;
+
+  QSize targetSize = QSize( mmWidth, mmHeight );
+  if ( settings.wmsLegendSize().width() < mmWidth )
+  {
+    double targetHeight = mmHeight * settings.wmsLegendSize().width() / mmWidth;
+    targetSize = QSize( settings.wmsLegendSize().width(), targetHeight );
+  }
+  else if ( settings.wmsLegendSize().height() < mmHeight )
+  {
+    double targetWidth = mmWidth * settings.wmsLegendSize().height() / mmHeight;
+    targetSize = QSize( targetWidth, settings.wmsLegendSize().height() );
+  }
+
   if ( ctx && ctx->painter )
   {
-    const QImage image = getLegendGraphic();
+    QImage smoothImage = image.scaled( targetSize / px2mm, Qt::KeepAspectRatio, Qt::SmoothTransformation );
 
     switch ( settings.symbolAlignment() )
     {
@@ -1258,23 +1276,23 @@ QSizeF QgsWmsLegendNode::drawSymbol( const QgsLegendSettings &settings, ItemCont
       default:
         ctx->painter->drawImage( QRectF( ctx->columnLeft,
                                          ctx->top,
-                                         settings.wmsLegendSize().width(),
-                                         settings.wmsLegendSize().height() ),
-                                 image,
-                                 QRectF( QPointF( 0, 0 ), image.size() ) );
+                                         targetSize.width(),
+                                         targetSize.height() ),
+                                 smoothImage,
+                                 QRectF( QPointF( 0, 0 ), smoothImage.size() ) );
         break;
 
       case Qt::AlignRight:
         ctx->painter->drawImage( QRectF( ctx->columnRight - settings.wmsLegendSize().width(),
                                          ctx->top,
-                                         settings.wmsLegendSize().width(),
-                                         settings.wmsLegendSize().height() ),
-                                 image,
-                                 QRectF( QPointF( 0, 0 ), image.size() ) );
+                                         targetSize.width(),
+                                         targetSize.height() ),
+                                 smoothImage,
+                                 QRectF( QPointF( 0, 0 ), smoothImage.size() ) );
         break;
     }
   }
-  return settings.wmsLegendSize();
+  return targetSize;
 }
 
 QJsonObject QgsWmsLegendNode::exportSymbolToJson( const QgsLegendSettings &, const QgsRenderContext & ) const
@@ -1528,7 +1546,7 @@ QJsonObject QgsVectorLabelLegendNode::exportSymbolToJson( const QgsLegendSetting
 
   double textWidth, textHeight;
   textWidthHeight( textWidth, textHeight, ctx, textFormat, textLines );
-  const QPixmap previewPixmap = mLabelSettings.labelSettingsPreviewPixmap( mLabelSettings, QSize( textWidth, textHeight ), mLabelSettings.legendString() );
+  const QPixmap previewPixmap = QgsPalLayerSettings::labelSettingsPreviewPixmap( mLabelSettings, QSize( textWidth, textHeight ), mLabelSettings.legendString() );
 
   QByteArray byteArray;
   QBuffer buffer( &byteArray );

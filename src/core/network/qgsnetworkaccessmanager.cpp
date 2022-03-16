@@ -70,7 +70,7 @@ class QgsNetworkProxyFactory : public QNetworkProxyFactory
       const auto constProxyFactories = nam->proxyFactories();
       for ( QNetworkProxyFactory *f : constProxyFactories )
       {
-        QList<QNetworkProxy> systemproxies = f->systemProxyForQuery( query );
+        QList<QNetworkProxy> systemproxies = QNetworkProxyFactory::systemProxyForQuery( query );
         if ( !systemproxies.isEmpty() )
           return systemproxies;
 
@@ -306,7 +306,7 @@ QNetworkReply *QgsNetworkAccessManager::createRequest( QNetworkAccessManager::Op
   QString userAgent = s.value( QStringLiteral( "/qgis/networkAndProxy/userAgent" ), "Mozilla/5.0" ).toString();
   if ( !userAgent.isEmpty() )
     userAgent += ' ';
-  userAgent += QStringLiteral( "QGIS/%1" ).arg( Qgis::versionInt() );
+  userAgent += QStringLiteral( "QGIS/%1/%2" ).arg( Qgis::versionInt() ).arg( QSysInfo::prettyProductName() );
   pReq->setRawHeader( "User-Agent", userAgent.toLatin1() );
 
 #ifndef QT_NO_SSL

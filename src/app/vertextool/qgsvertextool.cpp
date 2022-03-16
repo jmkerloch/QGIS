@@ -830,7 +830,7 @@ QgsPointLocator::Match QgsVertexTool::snapToEditableLayer( QgsMapMouseEvent *e )
 
   QgsSnappingConfig config = oldConfig;
   config.setEnabled( true );
-  config.setMode( QgsSnappingConfig::AdvancedConfiguration );
+  config.setMode( Qgis::SnappingMode::AdvancedConfiguration );
   config.setIntersectionSnapping( false );  // only snap to layers
   config.clearIndividualLayerSettings();
 
@@ -844,7 +844,7 @@ QgsPointLocator::Match QgsVertexTool::snapToEditableLayer( QgsMapMouseEvent *e )
   {
     if ( currentVlayer->isEditable() )
     {
-      const auto layers = canvas()->layers();
+      const auto layers = canvas()->layers( true );
       for ( QgsMapLayer *layer : layers )
       {
         QgsVectorLayer *vlayer = qobject_cast<QgsVectorLayer *>( layer );
@@ -858,13 +858,13 @@ QgsPointLocator::Match QgsVertexTool::snapToEditableLayer( QgsMapMouseEvent *e )
           layerSettings = existingSettings.value();
           layerSettings.setEnabled( vlayer == currentVlayer );
           layerSettings.setTolerance( tol );
-          layerSettings.setTypeFlag( static_cast<QgsSnappingConfig::SnappingTypeFlag>( QgsSnappingConfig::VertexFlag | QgsSnappingConfig::SegmentFlag ) );
+          layerSettings.setTypeFlag( static_cast<Qgis::SnappingTypes>( Qgis::SnappingType::Vertex | Qgis::SnappingType::Segment ) );
           layerSettings.setUnits( QgsTolerance::ProjectUnits );
         }
         else
         {
           layerSettings = QgsSnappingConfig::IndividualLayerSettings(
-                            vlayer == currentVlayer, static_cast<QgsSnappingConfig::SnappingTypeFlag>( QgsSnappingConfig::VertexFlag | QgsSnappingConfig::SegmentFlag ), tol, QgsTolerance::ProjectUnits, 0.0, 0.0 );
+                            vlayer == currentVlayer, static_cast<Qgis::SnappingTypes>( Qgis::SnappingType::Vertex | Qgis::SnappingType::Segment ), tol, QgsTolerance::ProjectUnits, 0.0, 0.0 );
         }
 
         config.setIndividualLayerSettings( vlayer, layerSettings );
@@ -886,7 +886,7 @@ QgsPointLocator::Match QgsVertexTool::snapToEditableLayer( QgsMapMouseEvent *e )
   // if there is no match from the current layer, try to use any editable vector layer
   if ( !m.isValid() && mMode == AllLayers )
   {
-    const auto layers = canvas()->layers();
+    const auto layers = canvas()->layers( true );
     for ( QgsMapLayer *layer : layers )
     {
       QgsVectorLayer *vlayer = qobject_cast<QgsVectorLayer *>( layer );
@@ -900,12 +900,12 @@ QgsPointLocator::Match QgsVertexTool::snapToEditableLayer( QgsMapMouseEvent *e )
         layerSettings = existingSettings.value();
         layerSettings.setEnabled( vlayer->isEditable() );
         layerSettings.setTolerance( tol );
-        layerSettings.setTypeFlag( static_cast<QgsSnappingConfig::SnappingTypeFlag>( QgsSnappingConfig::VertexFlag | QgsSnappingConfig::SegmentFlag ) );
+        layerSettings.setTypeFlag( static_cast<Qgis::SnappingTypes>( Qgis::SnappingType::Vertex | Qgis::SnappingType::Segment ) );
         layerSettings.setUnits( QgsTolerance::ProjectUnits );
       }
       else
       {
-        layerSettings = QgsSnappingConfig::IndividualLayerSettings( vlayer->isEditable(), static_cast<QgsSnappingConfig::SnappingTypeFlag>( QgsSnappingConfig::VertexFlag | QgsSnappingConfig::SegmentFlag ), tol, QgsTolerance::ProjectUnits, 0.0, 0.0 );
+        layerSettings = QgsSnappingConfig::IndividualLayerSettings( vlayer->isEditable(), static_cast<Qgis::SnappingTypes>( Qgis::SnappingType::Vertex | Qgis::SnappingType::Segment ), tol, QgsTolerance::ProjectUnits, 0.0, 0.0 );
       }
       config.setIndividualLayerSettings( vlayer, layerSettings );
     }
@@ -970,7 +970,7 @@ QgsPointLocator::Match QgsVertexTool::snapToPolygonInterior( QgsMapMouseEvent *e
   // if there is no match from the current layer, try to use any editable vector layer
   if ( !m.isValid() && mMode == AllLayers )
   {
-    const auto layers = canvas()->layers();
+    const auto layers = canvas()->layers( true );
     for ( QgsMapLayer *layer : layers )
     {
       QgsVectorLayer *vlayer = qobject_cast<QgsVectorLayer *>( layer );
@@ -1039,7 +1039,7 @@ QSet<QPair<QgsVectorLayer *, QgsFeatureId> > QgsVertexTool::findAllEditableFeatu
 
   if ( mMode == AllLayers )
   {
-    const auto layers = canvas()->layers();
+    const auto layers = canvas()->layers( true );
     for ( QgsMapLayer *layer : layers )
     {
       QgsVectorLayer *vlayer = qobject_cast<QgsVectorLayer *>( layer );
@@ -1708,7 +1708,7 @@ void QgsVertexTool::startDragging( QgsMapMouseEvent *e )
 QList<QgsVectorLayer *> QgsVertexTool::editableVectorLayers()
 {
   QList<QgsVectorLayer *> editableLayers;
-  const auto layers = canvas()->layers();
+  const auto layers = canvas()->layers( true );
   for ( QgsMapLayer *layer : layers )
   {
     QgsVectorLayer *vlayer = qobject_cast<QgsVectorLayer *>( layer );

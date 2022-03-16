@@ -24,7 +24,7 @@
 #include <memory>
 #include "qgis_sip.h"
 #include "qgsconfig.h"
-#include "qgssettingsentry.h"
+#include "qgssettingsentryimpl.h"
 #include "qgstranslationcontext.h"
 
 class QgsSettingsRegistryCore;
@@ -160,9 +160,28 @@ class CORE_EXPORT QgsApplication : public QApplication
     static const char *QGIS_ORGANIZATION_DOMAIN;
     static const char *QGIS_APPLICATION_NAME;
 #ifndef SIP_RUN
-    QgsApplication( int &argc, char **argv, bool GUIenabled, const QString &profileFolder = QString(), const QString &platformName = "desktop" );
+
+    /**
+     * Constructor for QgsApplication.
+     *
+     * \param argc command line argument count
+     * \param argv command line arguments
+     * \param GUIenabled set to TRUE if a GUI application is required, or FALSE for a console only application
+     * \param profileFolder optional string representing the profile to load at startup
+     * \param platformName the QGIS platform name, e.g., "desktop", "server", "qgis_process" or "external" (for external CLI scripts)
+     */
+    QgsApplication( int &argc, char **argv, bool GUIenabled, const QString &profileFolder = QString(), const QString &platformName = "external" );
 #else
-    QgsApplication( SIP_PYLIST argv, bool GUIenabled, QString profileFolder = QString(), QString platformName = "desktop" ) / PostHook = __pyQtQAppHook__ / [( int &argc, char **argv, bool GUIenabled, const QString &profileFolder = QString(), const QString &platformName = "desktop" )];
+
+    /**
+     * Constructor for QgsApplication.
+     *
+     * \param argv command line arguments
+     * \param GUIenabled set to TRUE if a GUI application is required, or FALSE for a console only application
+     * \param profileFolder optional string representing the profile to load at startup
+     * \param platformName the QGIS platform name, e.g., "desktop", "server", "qgis_process" or "external" (for external CLI scripts)
+     */
+    QgsApplication( SIP_PYLIST argv, bool GUIenabled, QString profileFolder = QString(), QString platformName = "external" ) / PostHook = __pyQtQAppHook__ / [( int &argc, char **argv, bool GUIenabled, const QString &profileFolder = QString(), const QString &platformName = "desktop" )];
     % MethodCode
     // The Python interface is a list of argument strings that is modified.
 
@@ -437,7 +456,7 @@ class CORE_EXPORT QgsApplication : public QApplication
     static QString osName();
 
     /**
-     * Returns the QGIS platform name, e.g., "desktop" or "server".
+     * Returns the QGIS platform name, e.g., "desktop", "server", "qgis_process" or "external" (for external CLI scripts).
      * \see osName()
      * \since QGIS 2.14
      */
@@ -448,6 +467,14 @@ class CORE_EXPORT QgsApplication : public QApplication
      * \since QGIS 3.0
      */
     static QString locale();
+
+    /**
+     * Sets the QGIS locale - used mainly by 3rd party apps and tests.
+     * In QGIS this is internally triggered by the application in startup.
+     *
+     * \since QGIS 3.22.2
+     */
+    static void setLocale( const QLocale &locale );
 
     //! Returns the path to user's themes folder
     static QString userThemesFolder();
@@ -982,15 +1009,15 @@ class CORE_EXPORT QgsApplication : public QApplication
 
 #ifndef SIP_RUN
     //! Settings entry locale user locale
-    static const inline QgsSettingsEntryString settingsLocaleUserLocale = QgsSettingsEntryString( QStringLiteral( "locale/userLocale" ), QgsSettings::NoSection, QString() );
+    static const inline QgsSettingsEntryString settingsLocaleUserLocale = QgsSettingsEntryString( QStringLiteral( "userLocale" ), QgsSettings::Prefix::LOCALE, QString() );
     //! Settings entry locale override flag
-    static const inline QgsSettingsEntryBool settingsLocaleOverrideFlag = QgsSettingsEntryBool( QStringLiteral( "locale/overrideFlag" ), QgsSettings::NoSection, false );
+    static const inline QgsSettingsEntryBool settingsLocaleOverrideFlag = QgsSettingsEntryBool( QStringLiteral( "overrideFlag" ), QgsSettings::Prefix::LOCALE, false );
     //! Settings entry locale global locale
-    static const inline QgsSettingsEntryString settingsLocaleGlobalLocale = QgsSettingsEntryString( QStringLiteral( "locale/globalLocale" ), QgsSettings::NoSection, QString() );
+    static const inline QgsSettingsEntryString settingsLocaleGlobalLocale = QgsSettingsEntryString( QStringLiteral( "globalLocale" ), QgsSettings::Prefix::LOCALE, QString() );
     //! Settings entry locale show group separator
-    static const inline QgsSettingsEntryBool settingsLocaleShowGroupSeparator = QgsSettingsEntryBool( QStringLiteral( "locale/showGroupSeparator" ), QgsSettings::NoSection, false );
+    static const inline QgsSettingsEntryBool settingsLocaleShowGroupSeparator = QgsSettingsEntryBool( QStringLiteral( "showGroupSeparator" ), QgsSettings::Prefix::LOCALE, false );
     //! Settings entry search path for SVG
-    static const inline QgsSettingsEntryStringList settingsSearchPathsForSVG = QgsSettingsEntryStringList( QStringLiteral( "svg/searchPathsForSVG" ), QgsSettings::NoSection, QStringList() );
+    static const inline QgsSettingsEntryStringList settingsSearchPathsForSVG = QgsSettingsEntryStringList( QStringLiteral( "searchPathsForSVG" ), QgsSettings::Prefix::SVG, QStringList() );
 #endif
 
 #ifdef SIP_RUN
@@ -1023,6 +1050,15 @@ class CORE_EXPORT QgsApplication : public QApplication
      * \since QGIS 3.4
      */
     void requestForTranslatableObjects( QgsTranslationContext *translationContext );
+
+
+    /**
+     * Emitted when project locale has been changed.
+     *
+     * \since QGIS 3.22.2
+     */
+    void localeChanged();
+
 
   private:
 

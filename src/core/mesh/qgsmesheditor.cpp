@@ -175,7 +175,7 @@ bool QgsMeshEditor::faceCanBeAdded( const QgsMeshFace &face )
     return false;
 
   // Check if there is topological error with the mesh
-  QgsTopologicalMesh::TopologicalFaces topologicalFaces = mTopologicalMesh.createNewTopologicalFaces( facesToAdd, true, error );
+  QgsTopologicalMesh::TopologicalFaces topologicalFaces = QgsTopologicalMesh::createNewTopologicalFaces( facesToAdd, true, error );
   error = mTopologicalMesh.facesCanBeAdded( topologicalFaces );
 
   if ( error.errorType != Qgis::MeshEditingErrorType::NoError )
@@ -519,7 +519,7 @@ QVector<QgsMeshFace> QgsMeshEditor::prepareFaces( const QVector<QgsMeshFace> &fa
       break;
     }
 
-    error = mTopologicalMesh.counterClockwiseFaces( face, mMesh );
+    error = QgsTopologicalMesh::counterClockwiseFaces( face, mMesh );
     if ( error.errorType != Qgis::MeshEditingErrorType::NoError )
       break;
   }
@@ -535,7 +535,7 @@ QgsMeshEditingError QgsMeshEditor::addFaces( const QVector<QVector<int> > &faces
   if ( error.errorType != Qgis::MeshEditingErrorType::NoError )
     return error;
 
-  QgsTopologicalMesh::TopologicalFaces topologicalFaces = mTopologicalMesh.createNewTopologicalFaces( facesToAdd, true, error );
+  QgsTopologicalMesh::TopologicalFaces topologicalFaces = QgsTopologicalMesh::createNewTopologicalFaces( facesToAdd, true, error );
 
   error = mTopologicalMesh.facesCanBeAdded( topologicalFaces );
 
@@ -906,7 +906,7 @@ QgsMeshLayerUndoCommandAddFaces::QgsMeshLayerUndoCommandAddFaces( QgsMeshEditor 
   : QgsMeshLayerUndoCommandMeshEdit( meshEditor )
   , mFaces( faces )
 {
-  setText( QObject::tr( "Add %n faces", nullptr, faces.meshFaces().count() ) );
+  setText( QObject::tr( "Add %n face(s)", nullptr, faces.meshFaces().count() ) );
 }
 
 void QgsMeshLayerUndoCommandAddFaces::redo()
@@ -930,7 +930,7 @@ QgsMeshLayerUndoCommandRemoveFaces::QgsMeshLayerUndoCommandRemoveFaces( QgsMeshE
   : QgsMeshLayerUndoCommandMeshEdit( meshEditor )
   , mfacesToRemoveIndexes( facesToRemoveIndexes )
 {
-  setText( QObject::tr( "Remove %n faces", nullptr, facesToRemoveIndexes.count() ) );
+  setText( QObject::tr( "Remove %n face(s)", nullptr, facesToRemoveIndexes.count() ) );
 }
 
 void QgsMeshLayerUndoCommandRemoveFaces::redo()
@@ -1167,7 +1167,7 @@ QgsMeshLayerUndoCommandSplitFaces::QgsMeshLayerUndoCommandSplitFaces( QgsMeshEdi
   : QgsMeshLayerUndoCommandMeshEdit( meshEditor )
   , mFaceIndexes( faceIndexes )
 {
-  setText( QObject::tr( "Split %n faces", nullptr, faceIndexes.count() ) );
+  setText( QObject::tr( "Split %n face(s)", nullptr, faceIndexes.count() ) );
 }
 
 void QgsMeshLayerUndoCommandSplitFaces::redo()

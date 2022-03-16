@@ -56,6 +56,7 @@ QgsRenderContext::QgsRenderContext( const QgsRenderContext &rh )
   , mRendererScale( rh.mRendererScale )
   , mSymbologyReferenceScale( rh.mSymbologyReferenceScale )
   , mLabelingEngine( rh.mLabelingEngine )
+  , mLabelSink( rh.mLabelSink )
   , mSelectionColor( rh.mSelectionColor )
   , mVectorSimplifyMethod( rh.mVectorSimplifyMethod )
   , mExpressionContext( rh.mExpressionContext )
@@ -77,6 +78,7 @@ QgsRenderContext::QgsRenderContext( const QgsRenderContext &rh )
   , mSize( rh.mSize )
   , mDevicePixelRatio( rh.mDevicePixelRatio )
   , mImageFormat( rh.mImageFormat )
+  , mRendererUsage( rh.mRendererUsage )
 #ifdef QGISDEBUG
   , mHasTransformContext( rh.mHasTransformContext )
 #endif
@@ -99,6 +101,7 @@ QgsRenderContext &QgsRenderContext::operator=( const QgsRenderContext &rh )
   mRendererScale = rh.mRendererScale;
   mSymbologyReferenceScale = rh.mSymbologyReferenceScale;
   mLabelingEngine = rh.mLabelingEngine;
+  mLabelSink = rh.mLabelSink;
   mSelectionColor = rh.mSelectionColor;
   mVectorSimplifyMethod = rh.mVectorSimplifyMethod;
   mExpressionContext = rh.mExpressionContext;
@@ -121,6 +124,7 @@ QgsRenderContext &QgsRenderContext::operator=( const QgsRenderContext &rh )
   mDevicePixelRatio = rh.mDevicePixelRatio;
   mImageFormat = rh.mImageFormat;
   setIsTemporal( rh.isTemporal() );
+  mRendererUsage = rh.mRendererUsage;
   if ( isTemporal() )
     setTemporalRange( rh.temporalRange() );
 #ifdef QGISDEBUG
@@ -245,6 +249,7 @@ QgsRenderContext QgsRenderContext::fromMapSettings( const QgsMapSettings &mapSet
   ctx.setFlag( Qgis::RenderContextFlag::LosslessImageRendering, mapSettings.testFlag( Qgis::MapSettingsFlag::LosslessImageRendering ) );
   ctx.setFlag( Qgis::RenderContextFlag::Render3DMap, mapSettings.testFlag( Qgis::MapSettingsFlag::Render3DMap ) );
   ctx.setFlag( Qgis::RenderContextFlag::HighQualityImageTransforms, mapSettings.testFlag( Qgis::MapSettingsFlag::HighQualityImageTransforms ) );
+  ctx.setFlag( Qgis::RenderContextFlag::SkipSymbolRendering, mapSettings.testFlag( Qgis::MapSettingsFlag::SkipSymbolRendering ) );
   ctx.setScaleFactor( mapSettings.outputDpi() / 25.4 ); // = pixels per mm
   ctx.setDpiTarget( mapSettings.dpiTarget() >= 0.0 ? mapSettings.dpiTarget() : -1.0 );
   ctx.setRendererScale( mapSettings.scale() );
@@ -273,6 +278,8 @@ QgsRenderContext QgsRenderContext::fromMapSettings( const QgsMapSettings &mapSet
   ctx.setImageFormat( mapSettings.outputImageFormat() );
 
   ctx.mClippingRegions = mapSettings.clippingRegions();
+
+  ctx.mRendererUsage = mapSettings.rendererUsage();
 
   return ctx;
 }

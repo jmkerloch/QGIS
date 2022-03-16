@@ -21,6 +21,8 @@
 #include "qgsproviderregistry.h"
 #include "qgsprovidermetadata.h"
 
+///@cond PRIVATE
+
 QgsPointCloudSourceSelect::QgsPointCloudSourceSelect( QWidget *parent, Qt::WindowFlags fl, QgsProviderRegistry::WidgetMode widgetMode ):
   QgsAbstractDataSourceWidget( parent, fl, widgetMode )
 {
@@ -96,7 +98,7 @@ void QgsPointCloudSourceSelect::addButtonClicked()
     {
       QMessageBox::information( this,
                                 tr( "Add Point Cloud Layers" ),
-                                tr( "Unvalid point cloud URL \"%1\", please make sure your URL ends with /ept.json" ).arg( mPath ) );
+                                tr( "Invalid point cloud URL \"%1\", please make sure your URL ends with /ept.json" ).arg( mPath ) );
       return;
     }
 
@@ -164,3 +166,4 @@ void QgsPointCloudSourceSelect::setProtocolWidgetsVisibility()
   mAuthWarning->hide();
 }
 
+///@endcond

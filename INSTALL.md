@@ -192,6 +192,13 @@ See [debian-ubuntu](https://qgis.org/en/site/forusers/alldownloads.html#debian-u
 currently supported distributions (plain xenial's GDAL for instance is too old
 and we build with GDAL2 from ubuntugis).
 
+To build [QGIS server landing page/catalog webapp](https://docs.qgis.org/latest/en/docs/server_manual/services.html#qgis-server-catalog) additional dependencies are required:
+
+Node.js (current LTS recommended): https://nodejs.org/en/download/<br>
+Yarn Package Manager: https://yarnpkg.com/getting-started/install
+
+Additionally, the cmake flag `WITH_SERVER_LANDINGPAGE_WEBAPP` needs to be turned on.
+
 ## 3.4. Setup ccache (Optional, but recommended)
 
 You should also setup ccache to speed up compile times:
@@ -424,17 +431,24 @@ We assume that you have the source code of QGIS ready and created a
 new subdirectory called `build` or `build-qt5` in it.
 
 ### 3.11.1. Install build dependencies
-
-|Install command for dependencies|
-|--------------------------------|
-|`dnf install qt5-qtbase-private-devel qt5-qtwebkit-devel qt5-qtlocation-devel qt5-qttools-static qca-qt5-devel qca-qt5-ossl qt5-qt3d-devel python3-qt5-devel python3-qscintilla-qt5-devel qscintilla-qt5-devel python3-qscintilla-devel python3-qscintilla-qt5 clang flex bison geos-devel gdal-devel sqlite-devel libspatialite-devel qt5-qtsvg-devel spatialindex-devel expat-devel proj-devel qwt-qt5-devel gsl-devel postgresql-devel cmake python3-future gdal-python3 python3-psycopg2 python3-PyYAML python3-pygments python3-jinja2 python3-OWSLib qca-qt5-ossl qwt-qt5-devel qtkeychain-qt5-devel qwt-devel sip-devel libzip-devel exiv2-devel`|
-
+|Distribution|Install command for packages|
+|------------|----------------------------|
+| Fedora 35 Workstation | ``dnf install qt5-qtbase-private-devel qt5-qtwebkit-devel qt5-qtlocation-devel qt5-qttools-static qca-qt5-devel qca-qt5-ossl qt5-qt3d-devel python3-qt5-devel python3-qscintilla-qt5-devel qscintilla-qt5-devel python3-qscintilla-qt5 clang flex bison geos-devel gdal-devel sqlite-devel libspatialite-devel qt5-qtsvg-devel spatialindex-devel expat-devel proj-devel qwt-qt5-devel gsl-devel postgresql-devel cmake python3-future gdal-python3 python3-psycopg2 python3-PyYAML python3-pygments python3-jinja2 python3-OWSLib qca-qt5-ossl qwt-qt5-devel qtkeychain-qt5-devel qwt-devel libzip-devel exiv2-devel python3-sip-devel protobuf-lite protobuf-lite-devel libzstd-devel qt5-qtserialport-devel`` |
+| older versions | ``dnf install qt5-qtbase-private-devel qt5-qtwebkit-devel qt5-qtlocation-devel qt5-qttools-static qca-qt5-devel qca-qt5-ossl qt5-qt3d-devel python3-qt5-devel python3-qscintilla-qt5-devel qscintilla-qt5-devel python3-qscintilla-devel python3-qscintilla-qt5 clang flex bison geos-devel gdal-devel sqlite-devel libspatialite-devel qt5-qtsvg-devel spatialindex-devel expat-devel proj-devel qwt-qt5-devel gsl-devel postgresql-devel cmake python3-future gdal-python3 python3-psycopg2 python3-PyYAML python3-pygments python3-jinja2 python3-OWSLib qca-qt5-ossl qwt-qt5-devel qtkeychain-qt5-devel qwt-devel sip-devel libzip-devel exiv2-devel`` |
 
 To build QGIS server additional dependencies are required:
 
 ```bash
 dnf install fcgi-devel
 ```
+
+And for building [QGIS server landing page/catalog webapp](https://docs.qgis.org/latest/en/docs/server_manual/services.html#qgis-server-catalog):
+
+```bash
+dnf install nodejs yarnpkg
+```
+
+Additionally, the cmake flag `WITH_SERVER_LANDINGPAGE_WEBAPP` needs to be turned on.
 
 Make sure that your build directory is completely empty when you enter the
 following command. Do never try to "re-use" an existing Qt5 build directory.

@@ -29,8 +29,8 @@ QgsMapRendererSequentialJob::QgsMapRendererSequentialJob( const QgsMapSettings &
 
   mImage = QImage( mSettings.deviceOutputSize(), mSettings.outputImageFormat() );
   mImage.setDevicePixelRatio( mSettings.devicePixelRatio() );
-  mImage.setDotsPerMeterX( mSettings.devicePixelRatio() * 1000 * settings.outputDpi() / 25.4 );
-  mImage.setDotsPerMeterY( mSettings.devicePixelRatio() * 1000 * settings.outputDpi() / 25.4 );
+  mImage.setDotsPerMeterX( 1000 * settings.outputDpi() / 25.4 );
+  mImage.setDotsPerMeterY( 1000 * settings.outputDpi() / 25.4 );
   mImage.fill( Qt::transparent );
 }
 
@@ -66,9 +66,12 @@ void QgsMapRendererSequentialJob::startPrivate()
   mPainter = new QPainter( &mImage );
 
   mInternalJob = new QgsMapRendererCustomPainterJob( mSettings, mPainter );
+  mInternalJob->setLabelSink( labelSink() );
   mInternalJob->setCache( mCache );
 
   connect( mInternalJob, &QgsMapRendererJob::finished, this, &QgsMapRendererSequentialJob::internalFinished );
+  connect( mInternalJob, &QgsMapRendererJob::layerRendered, this, &QgsMapRendererSequentialJob::layerRendered );
+  connect( mInternalJob, &QgsMapRendererJob::layerRenderingStarted, this, &QgsMapRendererSequentialJob::layerRenderingStarted );
 
   mInternalJob->start();
 }

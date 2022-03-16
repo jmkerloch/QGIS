@@ -1134,14 +1134,14 @@ static QgsCircle __recMinimalEnclosingCircle( QgsMultiPointXY points, QgsMultiPo
         boundary.pop_back();
         QgsPointXY p2 = boundary.last();
         boundary.pop_back();
-        circ_mec = QgsCircle().from2Points( QgsPoint( p1 ), QgsPoint( p2 ) );
+        circ_mec = QgsCircle::from2Points( QgsPoint( p1 ), QgsPoint( p2 ) );
       }
       break;
       default:
         QgsPoint p1( boundary.at( 0 ) );
         QgsPoint p2( boundary.at( 1 ) );
         QgsPoint p3( boundary.at( 2 ) );
-        circ_mec = QgsCircle().minimalCircleFrom3Points( p1, p2, p3 );
+        circ_mec = QgsCircle::minimalCircleFrom3Points( p1, p2, p3 );
         break;
     }
     return circ_mec;
@@ -1439,7 +1439,7 @@ json QgsGeometry::asJsonObject( int precision ) const
 
 }
 
-QVector<QgsGeometry> QgsGeometry::coerceToType( const QgsWkbTypes::Type type ) const
+QVector<QgsGeometry> QgsGeometry::coerceToType( const QgsWkbTypes::Type type, double defaultZ, double defaultM ) const
 {
   QVector< QgsGeometry > res;
   if ( isNull() )
@@ -1537,18 +1537,17 @@ QVector<QgsGeometry> QgsGeometry::coerceToType( const QgsWkbTypes::Type type ) c
   // Add Z/M back, set to 0
   if ( ! newGeom.constGet()->is3D() && QgsWkbTypes::hasZ( type ) )
   {
-    newGeom.get()->addZValue( 0.0 );
+    newGeom.get()->addZValue( defaultZ );
   }
   if ( ! newGeom.constGet()->isMeasure() && QgsWkbTypes::hasM( type ) )
   {
-    newGeom.get()->addMValue( 0.0 );
+    newGeom.get()->addMValue( defaultM );
   }
 
   // Multi -> single
   if ( ! QgsWkbTypes::isMultiType( type ) && newGeom.isMultipart( ) )
   {
     const QgsGeometryCollection *parts( static_cast< const QgsGeometryCollection * >( newGeom.constGet() ) );
-    QgsAttributeMap attrMap;
     res.reserve( parts->partCount() );
     for ( int i = 0; i < parts->partCount( ); i++ )
     {
@@ -2572,11 +2571,15 @@ double QgsGeometry::interpolateAngle( double distance ) const
   if ( !d->geometry )
     return 0.0;
 
+  const QgsAbstractGeometry *geom = d->geometry->simplifiedTypeRef();
+  if ( QgsWkbTypes::geometryType( geom->wkbType() ) == QgsWkbTypes::PointGeometry )
+    return 0.0;
+
   // always operate on segmentized geometries
   QgsGeometry segmentized = *this;
-  if ( QgsWkbTypes::isCurvedType( wkbType() ) )
+  if ( QgsWkbTypes::isCurvedType( geom->wkbType() ) )
   {
-    segmentized = QgsGeometry( static_cast< QgsCurve * >( d->geometry.get() )->segmentize() );
+    segmentized = QgsGeometry( static_cast< const QgsCurve * >( geom )->segmentize() );
   }
 
   QgsVertexId previous;
@@ -3097,8 +3100,6 @@ QgsGeometry QgsGeometry::unaryUnion( const QVector<QgsGeometry> &geometries )
 
 QgsGeometry QgsGeometry::polygonize( const QVector<QgsGeometry> &geometryList )
 {
-  QgsGeos geos( nullptr );
-
   QVector<const QgsAbstractGeometry *> geomV2List;
   for ( const QgsGeometry &g : geometryList )
   {
@@ -3109,7 +3110,7 @@ QgsGeometry QgsGeometry::polygonize( const QVector<QgsGeometry> &geometryList )
   }
 
   QString error;
-  QgsGeometry result = geos.polygonize( geomV2List, &error );
+  QgsGeometry result = QgsGeos::polygonize( geomV2List, &error );
   result.mLastError = error;
   return result;
 }
@@ -3203,7 +3204,6 @@ static bool vertexIndexInfo( const QgsAbstractGeometry *g, int vertexIndex, int 
   if ( const QgsGeometryCollection *geomCollection = qgsgeometry_cast<const QgsGeometryCollection *>( g ) )
   {
     partIndex = 0;
-    int offset = 0;
     for ( int i = 0; i < geomCollection->numGeometries(); ++i )
     {
       const QgsAbstractGeometry *part = geomCollection->geometryN( i );
@@ -3219,7 +3219,6 @@ static bool vertexIndexInfo( const QgsAbstractGeometry *g, int vertexIndex, int 
         return vertexIndexInfo( part, vertexIndex, nothing, ringIndex, vertex ); // set ring_index + index
       }
       vertexIndex -= numPoints;
-      offset += numPoints;
       partIndex++;
     }
   }

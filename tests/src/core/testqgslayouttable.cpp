@@ -37,6 +37,7 @@
 #include "qgslayoutatlas.h"
 #include "qgslayoututils.h"
 #include "qgspallabeling.h"
+#include "qgstextrenderer.h"
 
 #include <QObject>
 #include "qgstest.h"
@@ -56,6 +57,7 @@ class TestQgsLayoutTable : public QObject
 
     void attributeTableHeadings(); //test retrieving attribute table headers
     void attributeTableRows(); //test retrieving attribute table rows
+    void attributeTableFormattedRows(); //test retrieving attribute formatted table rows
     void attributeTableRowsLocalized(); //test retrieving attribute table rows with locale
     void attributeTableFilterFeatures(); //test filtering attribute table rows
     void attributeTableSetAttributes(); //test subset of attributes in table
@@ -87,6 +89,7 @@ class TestQgsLayoutTable : public QObject
     void testExpressionSort();
     void testScopeForCell();
     void testDataDefinedTextFormatForCell();
+    void testIntegerNullCell();
 
   private:
     QgsVectorLayer *mVectorLayer = nullptr;
@@ -229,6 +232,44 @@ void TestQgsLayoutTable::attributeTableRows()
   table->setMaximumNumberOfFeatures( 3 );
   compareTable( table, expectedRows );
 }
+
+void TestQgsLayoutTable::attributeTableFormattedRows()
+{
+  QgsVectorLayer vl { QStringLiteral( "Point?field=int:int" ), QStringLiteral( "test" ), QStringLiteral( "memory" ) };
+  QVariantList valueConfig;
+  QVariantMap config;
+  config[ QStringLiteral( "one" ) ] = QStringLiteral( "1" );
+  config[ QStringLiteral( "two" ) ] = QStringLiteral( "2" );
+  valueConfig.append( config );
+  QVariantMap editorConfig;
+  editorConfig.insert( QStringLiteral( "map" ), valueConfig );
+  vl.setEditorWidgetSetup( 0, QgsEditorWidgetSetup( QStringLiteral( "ValueMap" ), editorConfig ) );
+  QgsFeature f { vl.fields( ) };
+  f.setGeometry( QgsGeometry::fromWkt( QStringLiteral( "point(9 45)" ) ) );
+  f.setAttribute( QStringLiteral( "int" ), 2 );
+  QgsFeature f2 { vl.fields( ) };
+  f2.setGeometry( QgsGeometry::fromWkt( QStringLiteral( "point(10 46)" ) ) );
+  f2.setAttribute( QStringLiteral( "int" ), 1 );
+  vl.dataProvider()->addFeatures( QgsFeatureList() << f << f2 );
+
+  QVector<QStringList> expectedRows;
+  QStringList row;
+  row <<  QStringLiteral( "two" );
+  expectedRows.append( row );
+  QStringList row2;
+  row2 <<  QStringLiteral( "one" );
+  expectedRows.append( row2 );
+
+  QgsLayout l( QgsProject::instance() );
+  l.initializeDefaults();
+  QgsLayoutItemAttributeTable *table = new QgsLayoutItemAttributeTable( &l );
+  table->setVectorLayer( &vl );
+
+  //retrieve rows and check
+  compareTable( table, expectedRows );
+
+}
+
 void TestQgsLayoutTable::attributeTableRowsLocalized()
 {
   //test retrieving attribute table rows
@@ -251,17 +292,17 @@ void TestQgsLayoutTable::attributeTableRowsLocalized()
   table->setVectorLayer( &vl );
 
   //retrieve rows and check
-  QLocale().setDefault( QLocale::English );
+  QLocale::setDefault( QLocale::English );
   compareTable( table, expectedRows );
 
   expectedRows.clear();
   row.clear();
   row <<  QStringLiteral( "12.346" ) << QStringLiteral( "123.456,801" );
   expectedRows.append( row );
-  QLocale().setDefault( QLocale::Italian );
+  QLocale::setDefault( QLocale::Italian );
   compareTable( table, expectedRows );
 
-  QLocale().setDefault( QLocale::English );
+  QLocale::setDefault( QLocale::English );
 
 }
 
@@ -1118,6 +1159,40 @@ void TestQgsLayoutTable::testDataDefinedTextFormatForCell()
   QVERIFY( result );
 }
 
+void TestQgsLayoutTable::testIntegerNullCell()
+{
+  QgsLayout l( QgsProject::instance() );
+  l.initializeDefaults();
+  QgsLayoutItemAttributeTable *table = new QgsLayoutItemAttributeTable( &l );
+
+  l.addMultiFrame( table );
+  QgsLayoutFrame *frame = new QgsLayoutFrame( &l, table );
+  frame->attemptSetSceneRect( QRectF( 5, 5, 150, 30 ) );
+  frame->setFrameEnabled( true );
+  l.addLayoutItem( frame );
+  table->addFrame( frame );
+
+  std::unique_ptr<QgsVectorLayer> layer = std::make_unique< QgsVectorLayer> ( QStringLiteral( "Point?field=intf:integer" ), QStringLiteral( "point" ), QStringLiteral( "memory" ) );
+  QVERIFY( layer->isValid() );
+  QgsFeature f1( layer->dataProvider()->fields(), 1 );
+  f1.setAttribute( QStringLiteral( "intf" ), 1 );
+  QgsFeature f2( layer->dataProvider()->fields(), 2 );
+  f2.setAttribute( QStringLiteral( "intf" ), 2 );
+  QgsFeature f3( layer->dataProvider()->fields(), 3 );
+  f3.setAttribute( QStringLiteral( "intf" ), QVariant( QVariant::Int ) );
+  layer->dataProvider()->addFeatures( QgsFeatureList() << f1 << f2 << f3 );
+
+  table->setVectorLayer( layer.get() );
+  table->setContentTextFormat( QgsTextFormat::fromQFont( QgsFontUtils::getStandardTestFont( QStringLiteral( "Bold" ) ) ) );
+  table->setHeaderTextFormat( QgsTextFormat::fromQFont( QgsFontUtils::getStandardTestFont( QStringLiteral( "Bold" ) ) ) );
+
+  QgsLayoutChecker checker( QStringLiteral( "composerattributetable_integernullcell" ), &l );
+  checker.setControlPathPrefix( QStringLiteral( "composer_table" ) );
+  const bool result = checker.testLayout( mReport );
+  QVERIFY( result );
+
+}
+
 void TestQgsLayoutTable::align()
 {
   QgsLayout l( QgsProject::instance() );
@@ -1644,17 +1719,14 @@ void TestQgsLayoutTable::wrappedText()
 {
   QgsProject p;
   QgsLayout l( &p );
-  QgsLayoutItemAttributeTable *t = new QgsLayoutItemAttributeTable( &l );
-  t->setWrapBehavior( QgsLayoutTable::WrapText );
 
   const QFont f;
   const QString sourceText( "Lorem ipsum dolor sit amet, consectetur adipisici elit, sed eiusmod tempor incidunt ut labore et dolore magna aliqua" );
   QgsRenderContext context = QgsLayoutUtils::createRenderContextForLayout( &l, nullptr );
-  const QString wrapText = t->wrappedText( context, sourceText, 101 /*columnWidth*/, QgsTextFormat::fromQFont( f ) ).join( '\n' );
+  const QString wrapText = QgsTextRenderer::wrappedText( context, sourceText, context.convertToPainterUnits( 101, QgsUnitTypes::RenderMillimeters ) /*columnWidth*/, QgsTextFormat::fromQFont( f ) ).join( '\n' );
   //there should be no line break before the last word (bug #20546)
   QVERIFY( !wrapText.endsWith( "\naliqua" ) );
 }
-
 
 void TestQgsLayoutTable::testBaseSort()
 {

@@ -244,20 +244,26 @@ class CORE_EXPORT QgsMapSettings : public QgsTemporalRangeObject
      *
      * The layers are stored in the reverse order of how they are rendered (layer with index 0 will be on top).
      *
+     * Since QGIS 3.24, if the \a expandGroupLayers option is TRUE then group layers will be converted to
+     * all their child layers.
+     *
      * \see layers()
      * \see setLayers()
      */
-    QStringList layerIds() const;
+    QStringList layerIds( bool expandGroupLayers = false ) const;
 
     /**
      * Returns the list of layers which will be rendered in the map.
      *
      * The layers are stored in the reverse order of how they are rendered (layer with index 0 will be on top)
      *
+     * Since QGIS 3.24, if the \a expandGroupLayers option is TRUE then group layers will be converted to
+     * all their child layers.
+     *
      * \see setLayers()
      * \see layerIds()
      */
-    QList<QgsMapLayer *> layers() const;
+    QList<QgsMapLayer *> layers( bool expandGroupLayers = false ) const;
 
     /**
      * Sets the list of \a layers to render in the map.
@@ -799,6 +805,25 @@ class CORE_EXPORT QgsMapSettings : public QgsTemporalRangeObject
      */
     void setZRange( const QgsDoubleRange &range );
 
+    /**
+     * Returns the rendering usage
+     *
+     * \see setRendererUsage()
+     * \since QGIS 3.24
+     */
+    Qgis::RendererUsage rendererUsage() const;
+
+    /**
+     * Sets the rendering usage
+     *
+     * \note This usage not alter how the map gets rendered but the intention is that data provider
+     * knows the context of rendering and may report that to the backend.
+     *
+     * \see rendererUsage()
+     * \since QGIS 3.24
+     */
+    void setRendererUsage( Qgis::RendererUsage rendererUsage );
+
   protected:
 
     double mDpi = 96.0;
@@ -857,6 +882,8 @@ class CORE_EXPORT QgsMapSettings : public QgsTemporalRangeObject
     QgsGeometry mLabelBoundaryGeometry;
 
     QgsVectorSimplifyMethod mSimplifyMethod;
+
+    Qgis::RendererUsage mRendererUsage = Qgis::RendererUsage::Unknown;
 
 #ifdef QGISDEBUG
     bool mHasTransformContext = false;

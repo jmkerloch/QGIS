@@ -19,6 +19,7 @@
 #include "qgis.h"
 #include "qgsapplication.h"
 #include "qgssettings.h"
+#include "qgsreferencedgeometry.h"
 
 #include <QDataStream>
 #include <QIcon>
@@ -256,6 +257,23 @@ QString QgsField::displayString( const QVariant &v ) const
   if ( v.isNull() )
   {
     return QgsApplication::nullRepresentation();
+  }
+
+  if ( v.userType() == QMetaType::type( "QgsReferencedGeometry" ) )
+  {
+    QgsReferencedGeometry geom = qvariant_cast<QgsReferencedGeometry>( v );
+    if ( geom.isNull() )
+      return QgsApplication::nullRepresentation();
+    else
+    {
+      QString wkt = geom.asWkt();
+      if ( wkt.length() >= 1050 )
+      {
+        wkt = wkt.left( 999 ) + QChar( 0x2026 );
+      }
+      QString formattedText = QStringLiteral( "%1 [%2]" ).arg( wkt, geom.crs().userFriendlyIdentifier() );
+      return formattedText;
+    }
   }
 
   // Special treatment for numeric types if group separator is set or decimalPoint is not a dot
@@ -530,6 +548,18 @@ bool QgsField::convertCompatible( QVariant &v, QString *errorMessage ) const
       v = QVariant( static_cast< long long >( std::round( dbl ) ) );
       return true;
     }
+  }
+
+  if ( d->type == QVariant::String && ( d->typeName.compare( QLatin1String( "json" ), Qt::CaseInsensitive ) == 0 || d->typeName == QLatin1String( "jsonb" ) ) )
+  {
+    const QJsonDocument doc = QJsonDocument::fromVariant( v );
+    if ( !doc.isNull() )
+    {
+      v = QString::fromUtf8( doc.toJson( QJsonDocument::Compact ).constData() );
+      return true;
+    }
+    v = QVariant( d->type );
+    return false;
   }
 
   if ( !v.convert( d->type ) )

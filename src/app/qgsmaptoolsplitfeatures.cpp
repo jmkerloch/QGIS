@@ -30,14 +30,17 @@ QgsMapToolSplitFeatures::QgsMapToolSplitFeatures( QgsMapCanvas *canvas )
   setSnapToLayerGridEnabled( false );
 }
 
-bool QgsMapToolSplitFeatures::supportsTechnique( QgsMapToolCapture::CaptureTechnique technique ) const
+bool QgsMapToolSplitFeatures::supportsTechnique( Qgis::CaptureTechnique technique ) const
 {
   switch ( technique )
   {
-    case QgsMapToolCapture::StraightSegments:
-    case QgsMapToolCapture::CircularString:
-    case QgsMapToolCapture::Streaming:
+    case Qgis::CaptureTechnique::StraightSegments:
+    case Qgis::CaptureTechnique::CircularString:
+    case Qgis::CaptureTechnique::Streaming:
       return true;
+
+    case Qgis::CaptureTechnique::Shape:
+      return false;
   }
   return false;
 }
@@ -118,8 +121,7 @@ void QgsMapToolSplitFeatures::cadCanvasReleaseEvent( QgsMapMouseEvent *e )
              ! topologyTestPoints.isEmpty() )
         {
           //check if we need to add topological points to other layers
-          const QList<QgsVectorLayer *> editableLayers;
-          const auto layers = canvas()->layers();
+          const auto layers = canvas()->layers( true );
           for ( QgsMapLayer *layer : layers )
           {
             QgsVectorLayer *vectorLayer = qobject_cast<QgsVectorLayer *>( layer );

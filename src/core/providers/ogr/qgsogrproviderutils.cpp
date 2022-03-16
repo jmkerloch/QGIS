@@ -999,17 +999,37 @@ GDALDatasetH QgsOgrProviderUtils::GDALOpenWrapper( const char *pszPath, bool bUp
 
   bool bIsGpkg = QFileInfo( filePath ).suffix().compare( QLatin1String( "gpkg" ), Qt::CaseInsensitive ) == 0;
   bool bIsLocalGpkg = false;
+
+#if GDAL_VERSION_NUM >= GDAL_COMPUTE_VERSION(3,4,2)
+  if ( bIsGpkg && !bUpdate )
+  {
+    papszOpenOptions = CSLSetNameValue( papszOpenOptions, "NOLOCK", "ON" );
+  }
+#endif
+
   if ( bIsGpkg &&
        IsLocalFile( filePath ) &&
        !CPLGetConfigOption( "OGR_SQLITE_JOURNAL", nullptr ) &&
        QgsSettings().value( QStringLiteral( "qgis/walForSqlite3" ), true ).toBool() )
   {
-    // For GeoPackage, we force opening of the file in WAL (Write Ahead Log)
-    // mode so as to avoid readers blocking writer(s), and vice-versa.
-    // https://www.sqlite.org/wal.html
-    // But only do that on a local file since WAL is advertised not to work
-    // on network shares
-    CPLSetThreadLocalConfigOption( "OGR_SQLITE_JOURNAL", "WAL" );
+    // Starting with GDAL 3.4.2, QgsOgrProvider::open(OpenModeInitial) will set
+    // a fake DO_NOT_ENABLE_WAL=ON when doing the initial open in update mode
+    // to indicate that we should not enable WAL.
+    // And NOLOCK=ON will be set in read-only attempts.
+    // Only enable it when enterUpdateMode() has been executed.
+    if ( CSLFetchNameValue( papszOpenOptions, "DO_NOT_ENABLE_WAL" ) == nullptr &&
+         CSLFetchNameValue( papszOpenOptions, "NOLOCK" ) == nullptr )
+    {
+      // For GeoPackage, we force opening of the file in WAL (Write Ahead Log)
+      // mode so as to avoid readers blocking writer(s), and vice-versa.
+      // https://www.sqlite.org/wal.html
+      // But only do that on a local file since WAL is advertised not to work
+      // on network shares
+#if GDAL_VERSION_NUM >= GDAL_COMPUTE_VERSION(3,4,2)
+      QgsDebugMsgLevel( QStringLiteral( "Enabling WAL" ), 3 );
+#endif
+      CPLSetThreadLocalConfigOption( "OGR_SQLITE_JOURNAL", "WAL" );
+    }
     bIsLocalGpkg = true;
   }
   else if ( bIsGpkg )
@@ -1017,6 +1037,11 @@ GDALDatasetH QgsOgrProviderUtils::GDALOpenWrapper( const char *pszPath, bool bUp
     // If WAL isn't set, we explicitly disable it, as it is persistent and it
     // may have been set on a previous connection.
     CPLSetThreadLocalConfigOption( "OGR_SQLITE_JOURNAL", "DELETE" );
+  }
+
+  if ( CSLFetchNameValue( papszOpenOptions, "DO_NOT_ENABLE_WAL" ) != nullptr )
+  {
+    papszOpenOptions = CSLSetNameValue( papszOpenOptions, "DO_NOT_ENABLE_WAL", nullptr );
   }
 
   bool modify_OGR_GPKG_FOREIGN_KEY_CHECK = !CPLGetConfigOption( "OGR_GPKG_FOREIGN_KEY_CHECK", nullptr );
@@ -1144,7 +1169,7 @@ void QgsOgrProviderUtils::GDALCloseWrapper( GDALDatasetH hDS )
        !CPLGetConfigOption( "OGR_SQLITE_JOURNAL", nullptr ) )
   {
     bool openedAsUpdate = false;
-    bool tryReturnToWall = false;
+    bool tryReturnToDelete = false;
     {
       QMutexLocker locker( sGlobalMutex() );
       ( *sMapCountOpenedDS() )[ datasetName ] --;
@@ -1152,27 +1177,18 @@ void QgsOgrProviderUtils::GDALCloseWrapper( GDALDatasetH hDS )
       {
         sMapCountOpenedDS()->remove( datasetName );
         openedAsUpdate = ( *sMapDSHandleToUpdateMode() )[hDS];
-        tryReturnToWall = true;
+        tryReturnToDelete = true;
       }
       sMapDSHandleToUpdateMode()->remove( hDS );
     }
-    if ( tryReturnToWall )
+    if ( tryReturnToDelete )
     {
       bool bSuccess = false;
-      if ( openedAsUpdate )
-      {
-        // We need to reset all iterators on layers, otherwise we will not
-        // be able to change journal_mode.
-        int layerCount = GDALDatasetGetLayerCount( hDS );
-        for ( int i = 0; i < layerCount; i ++ )
-        {
-          OGR_L_ResetReading( GDALDatasetGetLayer( hDS, i ) );
-        }
 
-        CPLPushErrorHandler( CPLQuietErrorHandler );
-        QgsDebugMsgLevel( QStringLiteral( "GPKG: Trying to return to delete mode" ), 2 );
+      // Check if the current journal_mode is not already delete
+      {
         OGRLayerH hSqlLyr = GDALDatasetExecuteSQL( hDS,
-                            "PRAGMA journal_mode = delete",
+                            "PRAGMA journal_mode",
                             nullptr, nullptr );
         if ( hSqlLyr )
         {
@@ -1183,13 +1199,44 @@ void QgsOgrProviderUtils::GDALCloseWrapper( GDALDatasetH hDS )
             bSuccess = EQUAL( pszRet, "delete" );
             QgsDebugMsgLevel( QStringLiteral( "Return: %1" ).arg( pszRet ), 2 );
           }
+          GDALDatasetReleaseResultSet( hDS, hSqlLyr );
         }
-        else if ( CPLGetLastErrorType() != CE_None )
+      }
+
+      if ( openedAsUpdate )
+      {
+        // We need to reset all iterators on layers, otherwise we will not
+        // be able to change journal_mode.
+        int layerCount = GDALDatasetGetLayerCount( hDS );
+        for ( int i = 0; i < layerCount; i ++ )
         {
-          QgsDebugMsg( QStringLiteral( "Return: %1" ).arg( CPLGetLastErrorMsg() ) );
+          OGR_L_ResetReading( GDALDatasetGetLayer( hDS, i ) );
         }
-        GDALDatasetReleaseResultSet( hDS, hSqlLyr );
-        CPLPopErrorHandler();
+
+        if ( !bSuccess )
+        {
+          CPLPushErrorHandler( CPLQuietErrorHandler );
+          QgsDebugMsgLevel( QStringLiteral( "GPKG: Trying to return to delete mode" ), 2 );
+          OGRLayerH hSqlLyr = GDALDatasetExecuteSQL( hDS,
+                              "PRAGMA journal_mode = delete",
+                              nullptr, nullptr );
+          if ( hSqlLyr )
+          {
+            gdal::ogr_feature_unique_ptr hFeat( OGR_L_GetNextFeature( hSqlLyr ) );
+            if ( hFeat )
+            {
+              const char *pszRet = OGR_F_GetFieldAsString( hFeat.get(), 0 );
+              bSuccess = EQUAL( pszRet, "delete" );
+              QgsDebugMsgLevel( QStringLiteral( "Return: %1" ).arg( pszRet ), 2 );
+            }
+          }
+          else if ( CPLGetLastErrorType() != CE_None )
+          {
+            QgsDebugMsg( QStringLiteral( "Return: %1" ).arg( CPLGetLastErrorMsg() ) );
+          }
+          GDALDatasetReleaseResultSet( hDS, hSqlLyr );
+          CPLPopErrorHandler();
+        }
       }
       GDALClose( hDS );
 
@@ -1304,7 +1351,7 @@ OGRLayerH QgsOgrProviderUtils::setSubsetString( OGRLayerH layer, GDALDatasetH ds
   QStringList lines {subsetString.split( QChar( '\n' ) )};
   lines.erase( std::remove_if( lines.begin(), lines.end(), []( const QString & line )
   {
-    return line.startsWith( QStringLiteral( "--" ) );
+    return line.startsWith( QLatin1String( "--" ) );
   } ), lines.end() );
   for ( auto &line : lines )
   {
@@ -1317,7 +1364,7 @@ OGRLayerH QgsOgrProviderUtils::setSubsetString( OGRLayerH layer, GDALDatasetH ds
         inLiteral = !inLiteral;
         literalChar = inLiteral ? line[i] : QChar( ' ' );
       }
-      if ( !inLiteral && line.mid( i ).startsWith( QStringLiteral( "--" ) ) )
+      if ( !inLiteral && line.mid( i ).startsWith( QLatin1String( "--" ) ) )
       {
         line = line.left( i );
         break;
@@ -2337,7 +2384,7 @@ void QgsOgrProviderUtils::release( QgsOgrLayer *&layer )
 }
 
 
-void QgsOgrProviderUtils::releaseDataset( QgsOgrDataset *&ds )
+void QgsOgrProviderUtils::releaseDataset( QgsOgrDataset *ds )
 {
   if ( !ds )
     return;
@@ -2345,7 +2392,6 @@ void QgsOgrProviderUtils::releaseDataset( QgsOgrDataset *&ds )
   QMutexLocker locker( sGlobalMutex() );
   releaseInternal( ds->mIdent, ds->mDs, true );
   delete ds;
-  ds = nullptr;
 }
 
 bool QgsOgrProviderUtils::canDriverShareSameDatasetAmongLayers( const QString &driverName )
@@ -2474,16 +2520,21 @@ QList< QgsProviderSublayerDetails > QgsOgrProviderUtils::querySubLayerList( int 
     // Add virtual sublayers for supported geometry types if layer type is unknown
     // Count features for geometry types
     QMap<OGRwkbGeometryType, int> fCount;
+    QSet<OGRwkbGeometryType> fHasZ;
     // TODO: avoid reading attributes, setRelevantFields cannot be called here because it is not constant
 
     layer->ResetReading();
     gdal::ogr_feature_unique_ptr fet;
     while ( fet.reset( layer->GetNextFeature() ), fet )
     {
-      const OGRwkbGeometryType gType = QgsOgrProviderUtils::ogrWkbSingleFlatten( resolveGeometryTypeForFeature( fet.get(), driverName ) );
+      OGRwkbGeometryType gType =  resolveGeometryTypeForFeature( fet.get(), driverName );
       if ( gType != wkbNone )
       {
+        bool hasZ = wkbHasZ( gType );
+        gType = QgsOgrProviderUtils::ogrWkbSingleFlatten( gType );
         fCount[gType] = fCount.value( gType ) + 1;
+        if ( hasZ )
+          fHasZ.insert( gType );
       }
 
       if ( feedback && feedback->isCanceled() )
@@ -2554,7 +2605,7 @@ QList< QgsProviderSublayerDetails > QgsOgrProviderUtils::querySubLayerList( int 
         }
       }
       details.setFeatureCount( fCount.value( countIt.key() ) );
-      details.setWkbType( QgsOgrUtils::ogrGeometryTypeToQgsWkbType( ( bIs25D ) ? wkbSetZ( countIt.key() ) : countIt.key() ) );
+      details.setWkbType( QgsOgrUtils::ogrGeometryTypeToQgsWkbType( ( bIs25D || fHasZ.contains( countIt.key() ) ) ? wkbSetZ( countIt.key() ) : countIt.key() ) );
       details.setGeometryColumnName( geometryColumnName );
       details.setDescription( longDescription );
       details.setProviderKey( QStringLiteral( "ogr" ) );
@@ -2565,7 +2616,8 @@ QList< QgsProviderSublayerDetails > QgsOgrProviderUtils::querySubLayerList( int 
       // in the uri for the sublayers (otherwise we'll be forced to re-do this iteration whenever
       // the uri from the sublayer is used to construct an actual vector layer)
       if ( details.wkbType() != QgsWkbTypes::Unknown )
-        parts.insert( QStringLiteral( "geometryType" ), ogrWkbGeometryTypeName( countIt.key() ) );
+        parts.insert( QStringLiteral( "geometryType" ),
+                      ogrWkbGeometryTypeName( ( bIs25D || fHasZ.contains( countIt.key() ) ) ? wkbSetZ( countIt.key() ) : countIt.key() ) );
       else
         parts.remove( QStringLiteral( "geometryType" ) );
 
@@ -2600,9 +2652,9 @@ bool QgsOgrProviderUtils::saveConnection( const QString &path, const QString &og
     if ( ok && ! connName.isEmpty() )
     {
       QgsProviderMetadata *providerMetadata = QgsProviderRegistry::instance()->providerMetadata( QStringLiteral( "ogr" ) );
-      QgsGeoPackageProviderConnection *providerConnection =  static_cast<QgsGeoPackageProviderConnection *>( providerMetadata->createConnection( connName ) );
+      std::unique_ptr< QgsGeoPackageProviderConnection > providerConnection( qgis::down_cast<QgsGeoPackageProviderConnection *>( providerMetadata->createConnection( connName ) ) );
       providerConnection->setUri( path );
-      providerMetadata->saveConnection( providerConnection, connName );
+      providerMetadata->saveConnection( providerConnection.get(), connName );
       return true;
     }
   }

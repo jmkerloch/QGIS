@@ -285,8 +285,8 @@ QList<QPair<QLabel *, QWidget *> > QgsVectorLayerSaveAsDialog::createControls( c
     if ( control )
     {
       // Pack the tooltip in some html element, so it gets linebreaks.
-      label->setToolTip( QStringLiteral( "<p>%1</p>" ).arg( option->docString ) );
-      control->setToolTip( QStringLiteral( "<p>%1</p>" ).arg( option->docString ) );
+      label->setToolTip( QStringLiteral( "<p>%1</p>" ).arg( option->docString.toHtmlEscaped() ) );
+      control->setToolTip( QStringLiteral( "<p>%1</p>" ).arg( option->docString.toHtmlEscaped() ) );
 
       controls << QPair<QLabel *, QWidget *>( label, control );
     }
@@ -485,6 +485,12 @@ void QgsVectorLayerSaveAsDialog::mFormatComboBox_currentIndexChanged( int idx )
                            sFormat == QLatin1String( "FileGDB" ) ||
                            sFormat == QLatin1String( "SQLite" ) ||
                            sFormat == QLatin1String( "SpatiaLite" ) );
+
+  if ( sFormat == QLatin1String( "XLSX" ) )
+    leLayername->setMaxLength( 31 );
+  else if ( leLayername->isEnabled() )
+    leLayername->setMaxLength( 32767 ); // default length
+
   if ( !leLayername->isEnabled() )
     leLayername->setText( QString() );
   else if ( leLayername->text().isEmpty() &&

@@ -20,7 +20,7 @@
 #include "qgslogger.h"
 #include "qgsproject.h"
 #include "qgsmaplayerrenderer.h"
-#include "qgsmaplayerlistutils.h"
+#include "qgsmaplayerlistutils_p.h"
 #include "qgsrendereditemresults.h"
 
 QgsMapRendererStagedRenderJob::QgsMapRendererStagedRenderJob( const QgsMapSettings &settings, Flags flags )
@@ -103,6 +103,7 @@ bool QgsMapRendererStagedRenderJob::renderCurrentPart( QPainter *painter )
   if ( mJobIt != mLayerJobs.end() )
   {
     LayerRenderJob &job = *mJobIt;
+    emit layerRenderingStarted( job.layerId );
     job.renderer->renderContext()->setPainter( painter );
 
     if ( job.context()->useAdvancedEffects() )
@@ -128,6 +129,8 @@ bool QgsMapRendererStagedRenderJob::renderCurrentPart( QPainter *painter )
       painter->setOpacity( 1.0 );
     }
     job.context()->setPainter( nullptr );
+
+    emit layerRendered( job.layerId );
   }
   else
   {

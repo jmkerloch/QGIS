@@ -77,7 +77,7 @@ QString QgsProcessingParameterMeshDatasetGroups::asPythonString( QgsProcessing::
         dt.append( QStringLiteral( "QgsMeshDatasetGroupMetadata.DataOnEdges" ) );
       if ( !dt.isEmpty() )
       {
-        code += QLatin1String( ", dataType=[" );
+        code += QLatin1String( ", supportedDataType=[" );
         code += dt.join( ',' );
         code += ']';
       }
@@ -307,8 +307,6 @@ bool QgsProcessingParameterMeshDatasetTime::valueIsAcceptable( const QVariant &i
 {
   if ( !input.isValid() )
     return allowEmpty;
-
-  const QDateTime timeDate = input.toDateTime();
 
   if ( input.toDateTime().isValid() )
     return true;

@@ -309,6 +309,11 @@ namespace QgsWms
       throw QgsBadRequestException( QgsServiceException::QGIS_MissingParameterValue,
                                     QgsWmsParameter::TEMPLATE );
     }
+    else if ( QgsServerProjectUtils::wmsRestrictedComposers( *mProject ).contains( templateName ) )
+    {
+      throw QgsBadRequestException( QgsServiceException::QGIS_InvalidParameterValue,
+                                    mWmsParameters[QgsWmsParameter::TEMPLATE ] );
+    }
 
     // check template
     const QgsLayoutManager *lManager = mProject->layoutManager();
@@ -602,13 +607,13 @@ namespace QgsWms
       exportSettings.rasterizeWholeImage = layout->customProperty( QStringLiteral( "rasterize" ), false ).toBool();
 
       // Export all pages
-      QgsLayoutExporter exporter( layout.get() );
       if ( atlas )
       {
-        exporter.exportToPdf( atlas, tempOutputFile.fileName(), exportSettings, exportError );
+        QgsLayoutExporter::exportToPdf( atlas, tempOutputFile.fileName(), exportSettings, exportError );
       }
       else
       {
+        QgsLayoutExporter exporter( layout.get() );
         exporter.exportToPdf( tempOutputFile.fileName(), exportSettings );
       }
     }
@@ -2885,15 +2890,39 @@ namespace QgsWms
         palSettings.fieldName = "label"; // defined in url
         palSettings.priority = 10; // always drawn
         palSettings.displayAll = true;
+        palSettings.dist = param.mLabelDistance;
+
+        if ( !qgsDoubleNear( param.mLabelRotation, 0 ) )
+        {
+          QgsPalLayerSettings::Property pR = QgsPalLayerSettings::LabelRotation;
+          palSettings.dataDefinedProperties().setProperty( pR, param.mLabelRotation );
+        }
 
         QgsPalLayerSettings::Placement placement = QgsPalLayerSettings::AroundPoint;
         switch ( param.mGeom.type() )
         {
           case QgsWkbTypes::PointGeometry:
           {
-            placement = QgsPalLayerSettings::AroundPoint;
-            palSettings.dist = 2; // in mm
-            palSettings.lineSettings().setPlacementFlags( QgsLabeling::LinePlacementFlags() );
+            if ( param.mHali.isEmpty() || param.mVali.isEmpty() || QgsWkbTypes::flatType( param.mGeom.wkbType() ) != QgsWkbTypes::Point )
+            {
+              placement = QgsPalLayerSettings::AroundPoint;
+              palSettings.lineSettings().setPlacementFlags( QgsLabeling::LinePlacementFlags() );
+            }
+            else //set label directly on point if there is hali/vali
+            {
+              QgsPointXY pt = param.mGeom.asPoint();
+              QgsPalLayerSettings::Property pX = QgsPalLayerSettings::PositionX;
+              QVariant x( pt.x() );
+              palSettings.dataDefinedProperties().setProperty( pX, x );
+              QgsPalLayerSettings::Property pY = QgsPalLayerSettings::PositionY;
+              QVariant y( pt.y() );
+              palSettings.dataDefinedProperties().setProperty( pY, y );
+              QgsPalLayerSettings::Property pHali = QgsPalLayerSettings::Hali;
+              palSettings.dataDefinedProperties().setProperty( pHali, param.mHali );
+              QgsPalLayerSettings::Property pVali = QgsPalLayerSettings::Vali;
+              palSettings.dataDefinedProperties().setProperty( pVali, param.mVali );
+            }
+
             break;
           }
           case QgsWkbTypes::PolygonGeometry:
@@ -2922,7 +2951,6 @@ namespace QgsWms
           default:
           {
             placement = QgsPalLayerSettings::Line;
-            palSettings.dist = 2;
             palSettings.lineSettings().setPlacementFlags( QgsLabeling::LinePlacementFlag::AboveLine | QgsLabeling::LinePlacementFlag::MapOrientation );
             break;
           }
@@ -3048,6 +3076,7 @@ namespace QgsWms
         case QgsMapLayerType::PluginLayer:
         case QgsMapLayerType::AnnotationLayer:
         case QgsMapLayerType::PointCloudLayer:
+        case QgsMapLayerType::GroupLayer:
           break;
       }
     }

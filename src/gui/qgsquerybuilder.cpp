@@ -42,7 +42,7 @@ QgsQueryBuilder::QgsQueryBuilder( QgsVectorLayer *layer,
   , mLayer( layer )
 {
   setupUi( this );
-  QgsGui::instance()->enableAutoGeometryRestore( this );
+  QgsGui::enableAutoGeometryRestore( this );
   connect( btnEqual, &QPushButton::clicked, this, &QgsQueryBuilder::btnEqual_clicked );
   connect( btnLessThan, &QPushButton::clicked, this, &QgsQueryBuilder::btnLessThan_clicked );
   connect( btnGreaterThan, &QPushButton::clicked, this, &QgsQueryBuilder::btnGreaterThan_clicked );
@@ -259,7 +259,7 @@ void QgsQueryBuilder::test()
     {
       QMessageBox::information( this,
                                 tr( "Query Result" ),
-                                tr( "The where clause returned %1 row(s).", "returned test rows" ). arg( featureCount ) );
+                                tr( "The where clause returned %n row(s).", "returned test rows", featureCount ) );
     }
   }
   else if ( mLayer->dataProvider()->hasErrors() )
