@@ -44,6 +44,8 @@ set(QGIS_CORE_SRCS
   classification/qgsclassificationstandarddeviation.cpp
   classification/qgsclassificationlogarithmic.cpp
 
+  elevation/qgsterrainprovider.cpp
+
   geocoding/qgsabstractgeocoderlocatorfilter.cpp
   geocoding/qgsgeocoder.cpp
   geocoding/qgsgeocodercontext.cpp
@@ -628,6 +630,7 @@ set(QGIS_CORE_SRCS
 
   project/qgsproject.cpp
   project/qgsprojectbadlayerhandler.cpp
+  project/qgsprojectelevationproperties.cpp
   project/qgsprojectfiletransform.cpp
   project/qgsprojectdisplaysettings.cpp
   project/qgsprojectproperty.cpp
@@ -1257,6 +1260,8 @@ set(QGIS_CORE_HDRS
   editform/qgsattributeeditorhtmlelement.h
   editform/qgsattributeeditorqmlelement.h
 
+  elevation/qgsterrainprovider.h
+
   externalstorage/qgsexternalstorage.h
   externalstorage/qgsexternalstorageregistry.h
 
@@ -1587,6 +1592,7 @@ set(QGIS_CORE_HDRS
   project/qgsproject.h
   project/qgsprojectbadlayerhandler.h
   project/qgsprojectdisplaysettings.h
+  project/qgsprojectelevationproperties.h
   project/qgsprojectfiletransform.h
   project/qgsprojectproperty.h
   project/qgsprojectservervalidator.h
@@ -2033,6 +2039,7 @@ target_include_directories(qgis_core PUBLIC
   dxf
   editform
   effects
+  elevation
   expression
   externalstorage
   fieldformatter

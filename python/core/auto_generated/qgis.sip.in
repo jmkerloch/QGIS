@@ -835,6 +835,14 @@ The development version
       Unknown,
     };
 
+    enum class ViewSyncModeFlag
+    {
+      Sync3DTo2D,
+      Sync2DTo3D,
+    };
+    typedef QFlags<Qgis::ViewSyncModeFlag> ViewSyncModeFlags;
+
+
     enum class HistoryProviderBackend
     {
       LocalProfile,
@@ -889,6 +897,29 @@ The development version
       Vertex,
       Centroid,
     };
+
+    enum class BetweenLineConstraint
+    {
+      NoConstraint,
+      Perpendicular,
+      Parallel
+    };
+
+    enum class LineExtensionSide
+    {
+      BeforeVertex,
+      AfterVertex,
+      NoVertex,
+    };
+
+    enum class ProjectFlag
+    {
+      EvaluateDefaultValuesOnProviderSide,
+      TrustStoredLayerStatistics,
+      RememberLayerEditStatusBetweenSessions,
+    };
+    typedef QFlags<Qgis::ProjectFlag> ProjectFlags;
+
 
     static const double DEFAULT_SEARCH_RADIUS_MM;
 
