@@ -3,7 +3,7 @@ name: SonarCloud
 on:
   push:
     branches:
-      - main
+      - master
       - develop
       - features/*
       - feature/*
@@ -78,5 +78,5 @@ jobs:
           locale-gen "${{env.LANG}}"
           update-locale LC_ALL="${{env.LANG}}"
           export LANG="${{env.LANG}}"
-          sonar-scanner --define sonar.host.url="${{ env.SONAR_SERVER_URL }}"
+          sonar-scanner --define sonar.host.url="${{ env.SONAR_SERVER_URL }}" --define sonar.cfamily.cache.path=$HOME/.sonar/cache
 
