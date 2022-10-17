@@ -126,19 +126,19 @@ struct CORE_EXPORT QgsMesh
    * Define mesh vertices
     * \since QGIS 3.16
    */
-  void setVertices(const QgsMeshVertices& vertices);
-  
+  void setVertices( const QgsMeshVertices &vertices );
+
   /**
    * Define mesh faces
     * \since QGIS 3.16
    */
-  void setFaces(const  QgsMeshFaces & faces);
+  void setFaces( const  QgsMeshFaces &faces );
 
   /**
    * Define mesh edges
     * \since QGIS 3.16
    */
-  void setEdges(const  QgsMeshEdges & edges);
+  void setEdges( const  QgsMeshEdges &edges );
 
 
   QgsMeshVertices vertices; SIP_SKIP

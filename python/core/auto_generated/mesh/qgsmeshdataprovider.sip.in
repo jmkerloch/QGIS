@@ -87,21 +87,21 @@ Compare two faces, return ``True`` if they are equivalent : same indexes and sam
 .. versionadded:: 3.16
 %End
 
-  void setVertices(const QgsMeshVertices& vertices);
+  void setVertices( const QgsMeshVertices &vertices );
 %Docstring
 Define mesh vertices
 
 .. versionadded:: 3.16
 %End
-  
-  void setFaces(const  QgsMeshFaces & faces);
+
+  void setFaces( const  QgsMeshFaces &faces );
 %Docstring
 Define mesh faces
 
 .. versionadded:: 3.16
 %End
 
-  void setEdges(const  QgsMeshEdges & edges);
+  void setEdges( const  QgsMeshEdges &edges );
 %Docstring
 Define mesh edges
 
