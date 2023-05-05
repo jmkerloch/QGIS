@@ -31,6 +31,7 @@ originally part of the larger QgsRasterLayer class
 #include "qgssymbollayerutils.h"
 #include "qgsreadwritecontext.h"
 #include "qgscolorramplegendnodesettings.h"
+#include "qgsclassificationlogarithmic.h"
 
 #include <cmath>
 QgsColorRampShader::QgsColorRampShader( double minimumValue, double maximumValue, QgsColorRamp *colorRamp, Type type, ClassificationMode classificationMode )
@@ -295,8 +296,9 @@ void QgsColorRampShader::classifyColorRamp( const int classes, const int band, c
         }
       }
     }
-    else // EqualInterval
+    else if(classificationMode() == EqualInterval )
     {
+      // Equal interval
       entryValues.reserve( classes );
       if ( discrete )
       {
@@ -321,6 +323,40 @@ void QgsColorRampShader::classifyColorRamp( const int classes, const int band, c
           entryValues.push_back( min + i * intervalDiff );
         }
       }
+    }
+    else
+    {
+
+      // Logarithmique
+      // get the min/max in log10 scale
+      const double actualLogMin { std::log10( min ) };
+      double logMin = std::floor( actualLogMin );
+      const double logMax = std::ceil( std::log10( max ) );
+
+      // calculate pretty breaks
+      QList<double> prettyBreaks { QgsSymbolLayerUtils::prettyBreaks( logMin, logMax, classes ) };
+
+      // If case the first class greater than the actual log min increase the minimum log
+      while ( ! prettyBreaks.isEmpty() && prettyBreaks.first() < actualLogMin )
+      {
+        logMin += 1.0;
+        prettyBreaks = QgsSymbolLayerUtils::prettyBreaks( logMin, logMax, classes );
+      }
+
+      // create the value
+      for ( int i = 0; i < prettyBreaks.count(); i++ )
+      {
+        prettyBreaks[i] = std::pow( 10, prettyBreaks.at( i ) );
+      }
+      QgsClassificationLogarithmic classification = QgsClassificationLogarithmic();
+      QList<QgsClassificationRange> values = classification.classes(min,max,classes);
+
+      for (int i =0 ; i < values.size(); i++)
+      {
+        entryValues.append(values.at(i).lowerBound());
+      }
+
+      //entryValues.append( prettyBreaks );
     }
 
     if ( !sourceColorRamp() || sourceColorRamp()->count() == 1 )

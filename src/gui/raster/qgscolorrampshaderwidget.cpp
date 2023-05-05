@@ -84,6 +84,8 @@ QgsColorRampShaderWidget::QgsColorRampShaderWidget( QWidget *parent )
 
   mClassificationModeComboBox->addItem( tr( "Continuous" ), QgsColorRampShader::Continuous );
   mClassificationModeComboBox->addItem( tr( "Equal Interval" ), QgsColorRampShader::EqualInterval );
+  mClassificationModeComboBox->addItem( tr( "Logarithmic" ), QgsColorRampShader::Logarithmic );
+  
   // Quantile added only on demand
   mClassificationModeComboBox->setCurrentIndex( mClassificationModeComboBox->findData( QgsColorRampShader::Continuous ) );
 

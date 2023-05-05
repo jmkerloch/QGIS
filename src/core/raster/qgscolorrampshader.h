@@ -57,7 +57,8 @@ class CORE_EXPORT QgsColorRampShader : public QgsRasterShaderFunction
     {
       Continuous = 1, //!< Uses breaks from color palette
       EqualInterval = 2, //!< Uses equal interval
-      Quantile = 3 //!< Uses quantile (i.e. equal pixel) count
+      Quantile = 3, //!< Uses quantile (i.e. equal pixel) count
+      Logarithmic = 4 //!< Uses quantile (i.e. equal pixel) count
     };
 
     /**
