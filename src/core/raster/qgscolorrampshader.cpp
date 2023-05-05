@@ -296,7 +296,7 @@ void QgsColorRampShader::classifyColorRamp( const int classes, const int band, c
         }
       }
     }
-    else if(classificationMode() == EqualInterval )
+    else if ( classificationMode() == EqualInterval )
     {
       // Equal interval
       entryValues.reserve( classes );
@@ -349,11 +349,11 @@ void QgsColorRampShader::classifyColorRamp( const int classes, const int band, c
         prettyBreaks[i] = std::pow( 10, prettyBreaks.at( i ) );
       }
       QgsClassificationLogarithmic classification = QgsClassificationLogarithmic();
-      QList<QgsClassificationRange> values = classification.classes(min,max,classes);
+      QList<QgsClassificationRange> values = classification.classes( min, max, classes );
 
-      for (int i =0 ; i < values.size(); i++)
+      for ( int i = 0 ; i < values.size(); i++ )
       {
-        entryValues.append(values.at(i).lowerBound());
+        entryValues.append( values.at( i ).lowerBound() );
       }
 
       //entryValues.append( prettyBreaks );
