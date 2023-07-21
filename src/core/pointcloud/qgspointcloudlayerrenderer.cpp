@@ -62,6 +62,15 @@ QgsPointCloudLayerRenderer::QgsPointCloudLayerRenderer( QgsPointCloudLayer *laye
     mZScale = elevationProps->zScale();
   }
 
+  if ( mRenderer
+       && !( context.flags() & Qgis::RenderContextFlag::RenderPreviewJob )
+       && !( context.flags() & Qgis::RenderContextFlag::Render3DMap ) )
+  {
+
+    std::cout << "QgsPointCloudLayerRenderer ask layer if refresh needed" << std::endl;
+    mLayer->refreshRendererIfNeeded( mRenderer.get(), context.extent() );
+  }
+
   mCloudExtent = mLayer->dataProvider()->polygonBounds();
 
   mClippingRegions = QgsMapClippingUtils::collectClippingRegionsForLayer( *renderContext(), layer );

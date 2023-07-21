@@ -42,7 +42,7 @@
 #ifdef HAVE_COPC
 #include "qgscopcpointcloudindex.h"
 #endif
-
+#include "qgspointcloudattributebyramprenderer.h"
 #include <QUrl>
 
 QgsPointCloudLayer::QgsPointCloudLayer( const QString &uri,
@@ -105,9 +105,43 @@ QgsRectangle QgsPointCloudLayer::extent() const
   return mDataProvider->extent();
 }
 
+void QgsPointCloudLayer::refreshRendererIfNeeded( QgsPointCloudRenderer *pointCloudRenderer,
+    const QgsRectangle &extent )
+{
+  QGIS_PROTECT_QOBJECT_THREAD_ACCESS
+
+  if (QgsPointCloudAttributeByRampRenderer* rampRenderer = dynamic_cast<QgsPointCloudAttributeByRampRenderer *>( pointCloudRenderer ) ) 
+  {
+    std::cout << "QgsPointCloudLayer::refreshRendererIfNeeded" << std::endl;
+
+    double min_val = extent.xMinimum();
+    double max_val = extent.xMaximum();
+
+    std::cout << "QgsPointCloudLayer::setMinMax" << std::endl;
+    rampRenderer->setMinimum(min_val);
+    rampRenderer->setMaximum(max_val);
+
+    QgsPointCloudAttributeByRampRenderer *r = dynamic_cast<QgsPointCloudAttributeByRampRenderer *>( renderer() );
+    r->setMinimum( min_val);
+    r->setMaximum( max_val); 
+
+    QgsColorRampShader shader = r->colorRampShader();   
+    shader.setMinimumValue( min_val);
+    shader.setMaximumValue( max_val );
+    shader.classifyColorRamp( 5, -1, QgsRectangle(), nullptr );
+    r->setColorRampShader(shader);
+
+    std::cout << "QgsPointCloudLayer emit signals" << std::endl;
+    emit repaintRequested();
+    emitStyleChanged();
+    emit rendererChanged();
+  }
+}
+
 QgsMapLayerRenderer *QgsPointCloudLayer::createMapRenderer( QgsRenderContext &rendererContext )
 {
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
+  std::cout << "QgsPointCloudLayer::createMapRenderer" << std::endl;
 
   if ( mRenderer->type() != QLatin1String( "extent" ) )
     loadIndexesForRenderContext( rendererContext );
