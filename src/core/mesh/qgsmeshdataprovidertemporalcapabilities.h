@@ -73,7 +73,7 @@ class CORE_EXPORT QgsMeshDataProviderTemporalCapabilities: public QgsDataProvide
      *
      * \note must be used only by the mesh data provider
      */
-    void addGroupReferenceDateTime( int group, const QDateTime &reference ) SIP_SKIP;
+    void addGroupReferenceDateTime( int group, const QDateTime &reference );
 
     /**
      * Adds a \a time (in milliseconds) from a dataset contained in \a group
@@ -81,7 +81,7 @@ class CORE_EXPORT QgsMeshDataProviderTemporalCapabilities: public QgsDataProvide
      * \note must be used only by the mesh data provider,
      * all dataset need to be added one after one
      */
-    void addDatasetTimeInMilliseconds( int group, qint64 time ) SIP_SKIP;
+    void addDatasetTimeInMilliseconds( int group, qint64 time );
 
     /**
      * Adds a \a time (in provider unit) from a dataset contained in \a group
@@ -89,7 +89,7 @@ class CORE_EXPORT QgsMeshDataProviderTemporalCapabilities: public QgsDataProvide
      * \note must be used only by the mesh data provider,
      * all dataset need to be added one after one
      */
-    void addDatasetTime( int group, double  time ) SIP_SKIP;
+    void addDatasetTime( int group, double  time );
 
     /**
      * Returns whether the reference time is set
