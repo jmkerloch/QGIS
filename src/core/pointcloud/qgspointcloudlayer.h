@@ -192,6 +192,12 @@ class CORE_EXPORT QgsPointCloudLayer : public QgsMapLayer, public QgsAbstractPro
     void setRenderer( QgsPointCloudRenderer *renderer SIP_TRANSFER );
 
     /**
+     * \brief Refresh renderer with new extent, if needed
+     *  \note not available in Python bindings
+     */
+    void refreshRendererIfNeeded( QgsPointCloudRenderer *rasterRenderer, const QgsRectangle &extent ) SIP_SKIP;
+
+    /**
      * Sets the string used to define a subset of the layer
      * \param subset The subset string to be used in a \a QgsPointCloudExpression
      * \returns TRUE, when setting the subset string was successful, FALSE otherwise
